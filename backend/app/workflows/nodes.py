@@ -1061,9 +1061,17 @@ class AssessmentWorkflowNodes:
     ) -> dict[str, object]:
         """Create a normalized failed-agent state update."""
 
+        safe_error_detail = str(error).strip()
+
         error_message = (
-            f"{agent_name} execution failed: {type(error).__name__}."
+            f"{agent_name} execution failed: "
+            f"{type(error).__name__}."
         )
+
+        if safe_error_detail:
+            error_message = (
+                f"{error_message} {safe_error_detail}"
+            )
         failure_event = WorkflowEvent(
             event_type=WorkflowEventType.WORKFLOW_FAILED,
             status=WorkflowStatus.HUMAN_REVIEW_REQUIRED,

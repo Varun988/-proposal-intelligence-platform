@@ -160,6 +160,11 @@ class VendorResearchAgent:
             research_input=research_input,
         )
 
+        result = self._canonicalize_result_evidence(
+            result=result,
+            evidence_inventory=evidence_inventory,
+        )
+
         return VendorResearchExecution(
             result=result,
             retrieved_evidence=evidence_inventory,
@@ -459,6 +464,100 @@ class VendorResearchAgent:
             },
         )
 
+    @staticmethod
+    def _canonicalize_result_evidence(
+        result: VendorResearchResult,
+        evidence_inventory: list[VendorEvidenceReference],
+    ) -> VendorResearchResult:
+        """Replace LLM citation metadata with retrieved source data."""
+
+        evidence_by_id = {
+            evidence.evidence_id: evidence
+            for evidence in evidence_inventory
+        }
+
+        evidence_by_chunk_id = {
+            evidence.chunk_id: evidence
+            for evidence in evidence_inventory
+        }
+
+        canonical_result = result.model_copy(
+            deep=True,
+        )
+
+        for finding in canonical_result.findings:
+            canonical_evidence: list[
+                VendorEvidenceReference
+            ] = []
+
+            for cited_evidence in finding.evidence:
+                retrieved_evidence = evidence_by_id.get(
+                    cited_evidence.evidence_id,
+                )
+
+                if retrieved_evidence is None:
+                    retrieved_evidence = evidence_by_chunk_id.get(
+                        cited_evidence.chunk_id,
+                    )
+
+                if retrieved_evidence is None:
+                    canonical_evidence.append(
+                        cited_evidence,
+                    )
+                    continue
+
+                canonical_evidence.append(
+                    retrieved_evidence.model_copy(
+                        deep=True,
+                    )
+                )
+
+            finding.evidence = canonical_evidence
+
+        for conflict in canonical_result.conflicts:
+            first_retrieved = evidence_by_id.get(
+                conflict.first_evidence.evidence_id,
+            )
+
+            if first_retrieved is None:
+                first_retrieved = evidence_by_chunk_id.get(
+                    conflict.first_evidence.chunk_id,
+                )
+
+            if first_retrieved is not None:
+                conflict.first_evidence = (
+                    first_retrieved.model_copy(
+                        deep=True,
+                    )
+                )
+
+            second_retrieved = evidence_by_id.get(
+                conflict.second_evidence.evidence_id,
+            )
+
+            if second_retrieved is None:
+                second_retrieved = evidence_by_chunk_id.get(
+                    conflict.second_evidence.chunk_id,
+                )
+
+            if second_retrieved is not None:
+                conflict.second_evidence = (
+                    second_retrieved.model_copy(
+                        deep=True,
+                    )
+                )
+
+        canonical_result.stale_evidence_ids = [
+            evidence.evidence_id
+            for evidence in evidence_inventory
+            if (
+                evidence.freshness
+                is VendorEvidenceFreshness.STALE
+            )
+        ]
+
+        return canonical_result
+    
     @staticmethod
     def _validate_llm_output(
         structured_data: dict[str, Any] | None,

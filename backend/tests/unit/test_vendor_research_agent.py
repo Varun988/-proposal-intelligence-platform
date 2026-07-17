@@ -320,3 +320,92 @@ async def test_agent_rejects_mismatched_vendor_name() -> None:
                 ],
             )
         )
+
+@pytest.mark.asyncio
+async def test_agent_canonicalizes_evidence_metadata() -> None:
+    structured_data = create_structured_result()
+
+    findings = structured_data["findings"]
+
+    assert isinstance(findings, list)
+    assert isinstance(findings[0], dict)
+
+    evidence_items = findings[0]["evidence"]
+
+    assert isinstance(evidence_items, list)
+    assert isinstance(evidence_items[0], dict)
+
+    evidence_items[0]["publication_date"] = None
+    evidence_items[0]["retrieved_date"] = None
+    evidence_items[0]["freshness"] = "unknown"
+    evidence_items[0]["retrieval_score"] = None
+    evidence_items[0]["final_score"] = None
+    evidence_items[0]["metadata"] = {}
+
+    agent, _, _ = create_agent(
+        structured_data=structured_data,
+    )
+
+    execution = await agent.research(
+        VendorResearchInput(
+            assessment_id="assessment-001",
+            vendor_name="Example Digital Services",
+            research_objectives=[
+                "company profile",
+            ],
+        )
+    )
+
+    evidence = execution.result.findings[0].evidence[0]
+    inventory_evidence = execution.retrieved_evidence[0]
+
+    assert evidence == inventory_evidence
+    assert evidence.publication_date == date(2026, 1, 1)
+    assert evidence.retrieved_date == date(2026, 7, 17)
+    assert (
+        evidence.freshness
+        is VendorEvidenceFreshness.CURRENT
+    )
+    assert evidence.retrieval_score == 0.90
+    assert evidence.final_score == 0.95
+
+
+@pytest.mark.asyncio
+async def test_agent_does_not_canonicalize_unknown_evidence() -> None:
+    structured_data = create_structured_result()
+
+    findings = structured_data["findings"]
+
+    assert isinstance(findings, list)
+    assert isinstance(findings[0], dict)
+
+    evidence_items = findings[0]["evidence"]
+
+    assert isinstance(evidence_items, list)
+    assert isinstance(evidence_items[0], dict)
+
+    evidence_items[0]["evidence_id"] = "fabricated-evidence"
+    evidence_items[0]["chunk_id"] = "fabricated-chunk"
+
+    agent, _, _ = create_agent(
+        structured_data=structured_data,
+    )
+
+    execution = await agent.research(
+        VendorResearchInput(
+            assessment_id="assessment-001",
+            vendor_name="Example Digital Services",
+            research_objectives=[
+                "company profile",
+            ],
+        )
+    )
+
+    cited_evidence = (
+        execution.result.findings[0].evidence[0]
+    )
+
+    assert cited_evidence.evidence_id == (
+        "fabricated-evidence"
+    )
+    assert cited_evidence.chunk_id == "fabricated-chunk"
