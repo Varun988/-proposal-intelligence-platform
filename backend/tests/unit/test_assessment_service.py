@@ -1,14 +1,14 @@
 import pytest
+
 from app.repositories.assessment import (
     InMemoryAssessmentRepository,
 )
-from app.services.assessment_service import (
-    AssessmentService,
-)
-
 from app.schemas.assessment import (
     AssessmentCreateRequest,
     AssessmentLifecycleStatus,
+)
+from app.services.assessment_service import (
+    AssessmentService,
 )
 from app.workflows.state import WorkflowStatus
 

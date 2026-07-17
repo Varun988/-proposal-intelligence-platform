@@ -1,21 +1,10 @@
-from app.services.document_chunking_service import (
-    DocumentChunkingService,
-)
-from app.services.document_extraction_service import (
-    DocumentExtractionService,
-)
-from app.services.embedding_service import EmbeddingService
-from app.services.llm_service import LLMService
-from app.services.retrieval_service import RetrievalService
-from app.services.assessment_service import (
-    AssessmentService,
-)
+"""Application service package.
 
-__all__ = [
-    "DocumentChunkingService",
-    "DocumentExtractionService",
-    "EmbeddingService",
-    "LLMService",
-    "RetrievalService",
-    "AssessmentService",
-]
+Use direct imports from concrete service modules, for example::
+
+    from app.services.assessment_service import AssessmentService
+    from app.services.llm_service import LLMService
+
+This initializer intentionally performs no eager imports to keep service-layer
+dependencies acyclic.
+"""

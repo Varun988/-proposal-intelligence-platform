@@ -307,28 +307,38 @@ async def test_agent_rejects_vendor_name_mismatch() -> None:
 
 
 @pytest.mark.asyncio
-async def test_agent_rejects_missing_decision_disclaimer() -> None:
+async def test_agent_canonicalizes_decision_disclaimer() -> None:
     structured_data = create_structured_result()
 
-    executive_report = structured_data["executive_report"]
+    executive_report = structured_data[
+        "executive_report"
+    ]
 
-    assert isinstance(executive_report, dict)
+    assert isinstance(
+        executive_report,
+        dict,
+    )
 
-    executive_report["decision_disclaimer"] = "Incomplete disclaimer."
+    executive_report["decision_disclaimer"] = (
+        "Incomplete model-generated disclaimer."
+    )
 
     agent, _ = create_agent(
         structured_data=structured_data,
     )
 
-    with pytest.raises(
-        AgentOutputValidationError,
-        match="required decision-support disclaimer",
-    ):
-        await agent.generate_report(
-            create_input(),
-        )
+    execution = await agent.generate_report(
+        create_input(),
+    )
 
-
+    assert (
+        execution
+        .result
+        .executive_report
+        .decision_disclaimer
+        == RISK_REPORT_DECISION_DISCLAIMER
+    )
+    
 @pytest.mark.asyncio
 async def test_agent_rejects_unknown_source_finding() -> None:
     structured_data = create_structured_result()

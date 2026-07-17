@@ -1,29 +1,6 @@
-from app.workflows.assessment_graph import create_assessment_graph
-from app.workflows.nodes import (
-    AssessmentWorkflowNodes,
-    OrchestratorAgentProtocol,
-    ProposalAnalysisAgentProtocol,
-)
-from app.workflows.state import (
-    AgentExecutionRecord,
-    AssessmentWorkflowState,
-    EvaluationRecord,
-    WorkflowEvent,
-    WorkflowEventType,
-    WorkflowRoute,
-    WorkflowStatus,
-)
+"""Proposal Intelligence Platform backend application.
 
-__all__ = [
-    "AgentExecutionRecord",
-    "AssessmentWorkflowNodes",
-    "AssessmentWorkflowState",
-    "EvaluationRecord",
-    "OrchestratorAgentProtocol",
-    "ProposalAnalysisAgentProtocol",
-    "WorkflowEvent",
-    "WorkflowEventType",
-    "WorkflowRoute",
-    "WorkflowStatus",
-    "create_assessment_graph",
-]
+The package initializer intentionally avoids importing workflows, services,
+agents, or schemas. Import concrete components from their defining modules to
+prevent circular imports and unnecessary application startup side effects.
+"""

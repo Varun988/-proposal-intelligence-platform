@@ -1,11 +1,8 @@
-from app.repositories.assessment import (
-    AssessmentRecord,
-    AssessmentRepositoryProtocol,
-    InMemoryAssessmentRepository,
-)
+"""Persistence repository package.
 
-__all__ = [
-    "AssessmentRecord",
-    "AssessmentRepositoryProtocol",
-    "InMemoryAssessmentRepository",
-]
+Use direct imports from concrete repository modules, for example::
+
+    from app.repositories.assessment import InMemoryAssessmentRepository
+
+This initializer intentionally performs no eager imports.
+"""
