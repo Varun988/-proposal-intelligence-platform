@@ -84,3 +84,15 @@ class VectorDimensionMismatchError(VectorStoreError):
 
 class EmptyVectorStoreError(VectorStoreError):
     """Raised when a search is attempted against an empty vector store."""
+
+
+class RetrievalError(ApplicationError):
+    """Base exception for retrieval-pipeline failures."""
+
+
+class DeduplicationConfigurationError(RetrievalError):
+    """Raised when deduplication configuration is invalid."""
+
+
+class RerankingConfigurationError(RetrievalError):
+    """Raised when reranking configuration is invalid."""

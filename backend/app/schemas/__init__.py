@@ -23,6 +23,9 @@ from app.schemas.llm import (
     TokenUsage,
 )
 from app.schemas.retrieval import (
+    DeduplicationResult,
+    RerankingResult,
+    RetrievalCandidate,
     VectorSearchResponse,
     VectorSearchResult,
 )
@@ -34,6 +37,9 @@ __all__ = [
     "DocumentMetadata",
     "DocumentPage",
     "DocumentType",
+    "DeduplicationResult",
+    "RerankingResult",
+    "RetrievalCandidate",
     "EmbeddedChunk",
     "EmbeddingBatchResult",
     "EmbeddingVector",

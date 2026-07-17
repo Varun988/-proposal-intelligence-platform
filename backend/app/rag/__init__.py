@@ -8,4 +8,6 @@ __all__ = [
     "BaseEmbeddingProvider",
     "BaseVectorStore",
     "PageAwareDocumentChunker",
+    "BaseRetrievalDeduplicator",
+    "ContentDeduplicator",
 ]
