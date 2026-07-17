@@ -5,9 +5,14 @@ from app.evaluation.evaluators.citation import (
 from app.evaluation.evaluators.trajectory import (
     ProposalTrajectoryEvaluator,
 )
+from app.evaluation.evaluators.vendor_citation import (
+    VendorResearchCitationEvaluator,
+)
+
 
 __all__ = [
     "BaseEvaluator",
     "ProposalCitationEvaluator",
     "ProposalTrajectoryEvaluator",
+    "VendorResearchCitationEvaluator",
 ]

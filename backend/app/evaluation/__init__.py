@@ -2,6 +2,7 @@ from app.evaluation.evaluators import (
     BaseEvaluator,
     ProposalCitationEvaluator,
     ProposalTrajectoryEvaluator,
+    VendorResearchCitationEvaluator,
 )
 from app.evaluation.gates import evaluate_gate
 from app.evaluation.proposal_analysis import (

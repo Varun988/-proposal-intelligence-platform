@@ -1,3 +1,4 @@
+from app.agents.vendor_research.agent import VendorResearchAgent
 from app.agents.vendor_research.instructions import (
     VENDOR_RESEARCH_INSTRUCTION_VERSION,
     VENDOR_RESEARCH_SYSTEM_INSTRUCTIONS,
@@ -46,4 +47,5 @@ __all__ = [
     "VendorResearchInput",
     "VendorResearchResult",
     "VendorResearchToolCallTrace",
+    "VendorResearchAgent",
 ]
