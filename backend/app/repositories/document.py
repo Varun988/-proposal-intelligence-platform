@@ -46,6 +46,14 @@ class DocumentRepositoryProtocol(Protocol):
         document_id: str,
     ) -> bool:
         """Return whether a document exists."""
+
+    async def claim_indexing(
+        self,
+        document_id: str,
+        updated_at: datetime,
+    ) -> StoredDocumentRecord:
+        """Atomically claim a chunked document for indexing."""
+
     async def claim_extraction(
         self,
         document_id: str,
@@ -116,6 +124,63 @@ class InMemoryDocumentRepository:
                 deep=True,
             )
 
+    async def claim_indexing(
+        self,
+        document_id: str,
+        updated_at: datetime,
+    ) -> StoredDocumentRecord:
+        """Atomically claim a chunked document for indexing."""
+
+        normalized_id = document_id.strip()
+
+        if not normalized_id:
+            raise DocumentNotFoundError(
+                "Document ID cannot be empty."
+            )
+
+        async with self._lock:
+            record = self._records.get(
+                normalized_id,
+            )
+
+            if record is None:
+                raise DocumentNotFoundError(
+                    "Document not found: "
+                    f"{normalized_id}."
+                )
+
+            if (
+                record.lifecycle_status
+                is not DocumentLifecycleStatus.CHUNKED
+            ):
+                raise DocumentConflictError(
+                    "Document indexing can only be requested "
+                    "for a chunked document."
+                )
+
+            if not record.assessment_id:
+                raise DocumentConflictError(
+                    "Document indexing requires an assessment ID."
+                )
+
+            pending_record = record.model_copy(
+                update={
+                    "lifecycle_status": (
+                        DocumentLifecycleStatus
+                        .INDEXING_PENDING
+                    ),
+                    "error_message": None,
+                    "updated_at": updated_at,
+                },
+                deep=True,
+            )
+
+            self._records[normalized_id] = pending_record
+
+            return pending_record.model_copy(
+                deep=True,
+            )
+        
     async def update(
         self,
         record: StoredDocumentRecord,

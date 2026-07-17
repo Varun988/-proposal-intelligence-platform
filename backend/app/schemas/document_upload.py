@@ -25,6 +25,7 @@ class DocumentLifecycleStatus(StrEnum):
     CHUNKING_RUNNING = "chunking_running"
     CHUNKED = "chunked"
     INDEXING_PENDING = "indexing_pending"
+    INDEXING_RUNNING = "indexing_running"
     INDEXED = "indexed"
     FAILED = "failed"
 
