@@ -65,29 +65,18 @@ class ExtractedDocument(BaseModel):
     def full_text(self) -> str:
         """Join extracted text while preserving page boundaries."""
 
-        return "\n\n".join(
-            page.text
-            for page in self.pages
-            if page.text.strip()
-        )
+        return "\n\n".join(page.text for page in self.pages if page.text.strip())
 
     @computed_field
     @property
     def extracted_character_count(self) -> int:
         """Return the total number of extracted characters."""
 
-        return sum(
-            page.character_count
-            for page in self.pages
-        )
+        return sum(page.character_count for page in self.pages)
 
     @computed_field
     @property
     def text_page_count(self) -> int:
         """Return the number of pages containing extractable text."""
 
-        return sum(
-            1
-            for page in self.pages
-            if page.has_text
-        )
+        return sum(1 for page in self.pages if page.has_text)

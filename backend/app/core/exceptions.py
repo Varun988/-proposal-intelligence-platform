@@ -40,3 +40,7 @@ class DocumentExtractionError(DocumentError):
 
 class EncryptedDocumentError(DocumentExtractionError):
     """Raised when an encrypted document cannot be opened."""
+
+
+class DocumentParserRegistrationError(DocumentError):
+    """Raised when document parser registration is invalid."""

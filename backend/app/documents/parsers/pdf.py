@@ -58,9 +58,7 @@ class PypdfPDFParser(BaseDocumentParser):
             ]
 
             if not pages:
-                raise DocumentExtractionError(
-                    "The PDF document contains no pages."
-                )
+                raise DocumentExtractionError("The PDF document contains no pages.")
 
             return ExtractedDocument(
                 document_id=str(uuid4()),
@@ -93,14 +91,10 @@ class PypdfPDFParser(BaseDocumentParser):
         """Validate that the source file exists and is supported."""
 
         if not file_path.exists():
-            raise DocumentNotFoundError(
-                f"Document not found: {file_path.name}"
-            )
+            raise DocumentNotFoundError(f"Document not found: {file_path.name}")
 
         if not file_path.is_file():
-            raise DocumentNotFoundError(
-                f"Document path is not a file: {file_path.name}"
-            )
+            raise DocumentNotFoundError(f"Document path is not a file: {file_path.name}")
 
         if not self.can_parse(file_path):
             raise UnsupportedDocumentError(
@@ -122,9 +116,7 @@ class PypdfPDFParser(BaseDocumentParser):
             ) from error
 
         if decrypt_result == 0:
-            raise EncryptedDocumentError(
-                "The PDF document requires a password."
-            )
+            raise EncryptedDocumentError("The PDF document requires a password.")
 
     @staticmethod
     def _extract_page(

@@ -41,22 +41,13 @@ def test_parser_extracts_pages_and_metadata(
     assert len(document.pages) == 2
 
     assert document.pages[0].page_number == 1
-    assert (
-        "Project duration is twelve months."
-        in document.pages[0].text
-    )
+    assert "Project duration is twelve months." in document.pages[0].text
 
     assert document.pages[1].page_number == 2
-    assert (
-        "The proposal includes twenty consultants."
-        in document.pages[1].text
-    )
+    assert "The proposal includes twenty consultants." in document.pages[1].text
 
     assert document.metadata.title == "Synthetic Proposal"
-    assert (
-        document.metadata.author
-        == "Proposal Intelligence Tests"
-    )
+    assert document.metadata.author == "Proposal Intelligence Tests"
 
     assert document.text_page_count == 2
     assert document.extracted_character_count > 0
@@ -79,9 +70,7 @@ def test_parser_preserves_page_boundaries(
 
     assert document.pages[0].text == "First page content."
     assert document.pages[1].text == "Second page content."
-    assert document.full_text == (
-        "First page content.\n\nSecond page content."
-    )
+    assert document.full_text == ("First page content.\n\nSecond page content.")
 
 
 def test_parser_generates_stable_checksum(
@@ -96,10 +85,7 @@ def test_parser_generates_stable_checksum(
     first_result = parser.parse(pdf_path)
     second_result = parser.parse(pdf_path)
 
-    assert (
-        first_result.checksum_sha256
-        == second_result.checksum_sha256
-    )
+    assert first_result.checksum_sha256 == second_result.checksum_sha256
     assert first_result.document_id != second_result.document_id
 
 
