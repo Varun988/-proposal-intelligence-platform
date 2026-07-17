@@ -148,3 +148,15 @@ class AgentToolLimitError(AgentExecutionError):
 
 class AgentOutputValidationError(AgentExecutionError):
     """Raised when an agent returns invalid structured output."""
+
+
+class EvaluationError(ApplicationError):
+    """Base exception for evaluation-related failures."""
+
+
+class EvaluationConfigurationError(EvaluationError):
+    """Raised when evaluators or release gates are misconfigured."""
+
+
+class EvaluationExecutionError(EvaluationError):
+    """Raised when an evaluator cannot complete its evaluation."""
