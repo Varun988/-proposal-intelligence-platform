@@ -131,6 +131,7 @@ class DocumentUploadResponse(BaseModel):
 
     created_at: datetime
 
+
 class DocumentProcessResponse(BaseModel):
     """Response returned after accepting document processing."""
 

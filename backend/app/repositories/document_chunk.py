@@ -7,7 +7,6 @@ from app.core.exceptions import (
 )
 from app.schemas.chunk import (
     ChunkingResult,
-    DocumentChunk,
 )
 
 
@@ -54,18 +53,13 @@ class InMemoryDocumentChunkRepository:
 
         async with self._lock:
             if result.document_id in self._results:
-                raise DocumentConflictError(
-                    "Document chunks already exist: "
-                    f"{result.document_id}."
-                )
+                raise DocumentConflictError(f"Document chunks already exist: {result.document_id}.")
 
             stored_result = result.model_copy(
                 deep=True,
             )
 
-            self._results[result.document_id] = (
-                stored_result
-            )
+            self._results[result.document_id] = stored_result
 
             return stored_result.model_copy(
                 deep=True,
@@ -80,9 +74,7 @@ class InMemoryDocumentChunkRepository:
         normalized_id = document_id.strip()
 
         if not normalized_id:
-            raise DocumentNotFoundError(
-                "Document ID cannot be empty."
-            )
+            raise DocumentNotFoundError("Document ID cannot be empty.")
 
         async with self._lock:
             result = self._results.get(
@@ -90,10 +82,7 @@ class InMemoryDocumentChunkRepository:
             )
 
             if result is None:
-                raise DocumentNotFoundError(
-                    "Document chunks were not found: "
-                    f"{normalized_id}."
-                )
+                raise DocumentNotFoundError(f"Document chunks were not found: {normalized_id}.")
 
             return result.model_copy(
                 deep=True,
@@ -109,10 +98,7 @@ class InMemoryDocumentChunkRepository:
             document_id,
         )
 
-        return [
-            chunk.model_copy(deep=True)
-            for chunk in result.chunks
-        ]
+        return [chunk.model_copy(deep=True) for chunk in result.chunks]
 
     async def exists(
         self,

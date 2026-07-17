@@ -30,16 +30,12 @@ class DocumentChunkProcessingService:
     def __init__(
         self,
         document_repository: DocumentRepositoryProtocol,
-        extracted_document_repository: (
-            ExtractedDocumentRepositoryProtocol
-        ),
+        extracted_document_repository: (ExtractedDocumentRepositoryProtocol),
         chunk_repository: DocumentChunkRepositoryProtocol,
         chunking_service: DocumentChunkingService,
     ) -> None:
         self._document_repository = document_repository
-        self._extracted_document_repository = (
-            extracted_document_repository
-        )
+        self._extracted_document_repository = extracted_document_repository
         self._chunk_repository = chunk_repository
         self._chunking_service = chunking_service
 
@@ -64,20 +60,14 @@ class DocumentChunkProcessingService:
             document_id,
         )
 
-        if (
-            record.lifecycle_status
-            is not DocumentLifecycleStatus.CHUNKING_PENDING
-        ):
+        if record.lifecycle_status is not DocumentLifecycleStatus.CHUNKING_PENDING:
             raise DocumentConflictError(
-                "Document chunking requires lifecycle status "
-                "'chunking_pending'."
+                "Document chunking requires lifecycle status 'chunking_pending'."
             )
 
         running_record = record.model_copy(
             update={
-                "lifecycle_status": (
-                    DocumentLifecycleStatus.CHUNKING_RUNNING
-                ),
+                "lifecycle_status": (DocumentLifecycleStatus.CHUNKING_RUNNING),
                 "error_message": None,
                 "updated_at": utc_now(),
             },
@@ -89,11 +79,7 @@ class DocumentChunkProcessingService:
         )
 
         try:
-            extracted_document = (
-                await self
-                ._extracted_document_repository
-                .get(document_id)
-            )
+            extracted_document = await self._extracted_document_repository.get(document_id)
 
             result = self._chunking_service.chunk_document(
                 extracted_document,
@@ -105,9 +91,7 @@ class DocumentChunkProcessingService:
             )
 
             if not enriched_result.chunks:
-                raise DocumentChunkingError(
-                    "Document chunking produced no text chunks."
-                )
+                raise DocumentChunkingError("Document chunking produced no text chunks.")
 
             await self._chunk_repository.create(
                 enriched_result,
@@ -115,12 +99,8 @@ class DocumentChunkProcessingService:
 
             completed_record = running_record.model_copy(
                 update={
-                    "lifecycle_status": (
-                        DocumentLifecycleStatus.CHUNKED
-                    ),
-                    "chunk_count": (
-                        enriched_result.chunk_count
-                    ),
+                    "lifecycle_status": (DocumentLifecycleStatus.CHUNKED),
+                    "chunk_count": (enriched_result.chunk_count),
                     "error_message": None,
                     "updated_at": utc_now(),
                 },
@@ -144,9 +124,7 @@ class DocumentChunkProcessingService:
             if isinstance(error, DocumentChunkingError):
                 raise
 
-            raise DocumentChunkingError(
-                "Stored document chunking failed."
-            ) from error
+            raise DocumentChunkingError("Stored document chunking failed.") from error
 
     async def get_chunks(
         self,
@@ -172,27 +150,13 @@ class DocumentChunkProcessingService:
 
             metadata.update(
                 {
-                    "document_purpose": (
-                        document_record.purpose.value
-                    ),
-                    "original_file_name": (
-                        document_record.original_file_name
-                    ),
-                    "media_type": (
-                        document_record.media_type.value
-                    ),
-                    "assessment_id": (
-                        document_record.assessment_id
-                    ),
-                    "vendor_name": (
-                        document_record.vendor_name
-                    ),
-                    "source_name": (
-                        document_record.source_name
-                    ),
-                    "is_public_source": (
-                        document_record.is_public_source
-                    ),
+                    "document_purpose": (document_record.purpose.value),
+                    "original_file_name": (document_record.original_file_name),
+                    "media_type": (document_record.media_type.value),
+                    "assessment_id": (document_record.assessment_id),
+                    "vendor_name": (document_record.vendor_name),
+                    "source_name": (document_record.source_name),
+                    "is_public_source": (document_record.is_public_source),
                 }
             )
 
@@ -221,16 +185,11 @@ class DocumentChunkProcessingService:
     ) -> None:
         """Persist a safe chunking failure state."""
 
-        safe_message = (
-            "Document chunking failed: "
-            f"{type(error).__name__}."
-        )
+        safe_message = f"Document chunking failed: {type(error).__name__}."
 
         failed_record = record.model_copy(
             update={
-                "lifecycle_status": (
-                    DocumentLifecycleStatus.FAILED
-                ),
+                "lifecycle_status": (DocumentLifecycleStatus.FAILED),
                 "error_message": safe_message,
                 "updated_at": utc_now(),
             },

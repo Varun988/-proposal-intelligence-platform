@@ -47,8 +47,7 @@ def create_services() -> tuple[DocumentService, DocumentProcessingService]:
 
 
 @pytest.mark.asyncio
-async def test_processing_extracts_stored_text_document(
-) -> None:
+async def test_processing_extracts_stored_text_document() -> None:
     upload_service, processing_service = create_services()
 
     upload = await upload_service.upload_document(
@@ -77,16 +76,13 @@ async def test_processing_extracts_stored_text_document(
     assert extracted.document_type is DocumentType.TEXT
     assert extracted.page_count == 1
 
-    assert (
-        status.lifecycle_status
-        is DocumentLifecycleStatus.EXTRACTED
-    )
+    assert status.lifecycle_status is DocumentLifecycleStatus.EXTRACTED
     assert status.page_count == 1
     assert status.extracted_character_count == 27
 
+
 @pytest.mark.asyncio
-async def test_processing_persists_extracted_document(
-) -> None:
+async def test_processing_persists_extracted_document() -> None:
     upload_service, processing_service = create_services()
 
     upload = await upload_service.upload_document(
@@ -113,6 +109,7 @@ async def test_processing_persists_extracted_document(
     assert stored == extracted
     assert stored is not extracted
 
+
 @pytest.mark.asyncio
 async def test_processing_rejects_duplicate_request() -> None:
     upload_service, processing_service = create_services()
@@ -126,16 +123,11 @@ async def test_processing_rejects_duplicate_request() -> None:
         ),
     )
 
-    first_response = (
-        await processing_service.request_extraction(
-            upload.document_id,
-        )
+    first_response = await processing_service.request_extraction(
+        upload.document_id,
     )
 
-    assert (
-        first_response.lifecycle_status
-        is DocumentLifecycleStatus.EXTRACTION_PENDING
-    )
+    assert first_response.lifecycle_status is DocumentLifecycleStatus.EXTRACTION_PENDING
 
     from app.core.exceptions import DocumentConflictError
 
@@ -146,6 +138,7 @@ async def test_processing_rejects_duplicate_request() -> None:
         await processing_service.request_extraction(
             upload.document_id,
         )
+
 
 @pytest.mark.asyncio
 async def test_processing_requires_pending_state() -> None:

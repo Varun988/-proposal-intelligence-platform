@@ -24,10 +24,7 @@ def test_text_parser_extracts_single_page(
     assert result.document_type is DocumentType.TEXT
     assert result.mime_type == "text/plain"
     assert result.page_count == 1
-    assert (
-        result.pages[0].text
-        == "Synthetic proposal content."
-    )
+    assert result.pages[0].text == "Synthetic proposal content."
     assert result.extracted_character_count == 27
     assert len(result.checksum_sha256) == 64
 

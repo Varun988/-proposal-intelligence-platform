@@ -59,9 +59,7 @@ class DocumentService:
 
         record = StoredDocumentRecord(
             document_id=document_id,
-            original_file_name=Path(
-                original_file_name
-            ).name,
+            original_file_name=Path(original_file_name).name,
             storage_file_name=storage_file_name,
             media_type=media_type,
             purpose=metadata.purpose,
@@ -110,9 +108,7 @@ class DocumentService:
             error_message=record.error_message,
             created_at=record.created_at,
             updated_at=record.updated_at,
-            extracted_character_count=(
-            record.extracted_character_count
-        ),
+            extracted_character_count=(record.extracted_character_count),
         )
 
     async def read_content(
@@ -123,9 +119,7 @@ class DocumentService:
 
         record = await self._repository.get(document_id)
 
-        return await self._storage.read(
-            record.storage_file_name
-        )
+        return await self._storage.read(record.storage_file_name)
 
     @staticmethod
     def _to_upload_response(

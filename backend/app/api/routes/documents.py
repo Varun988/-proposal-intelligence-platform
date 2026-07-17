@@ -29,12 +29,12 @@ from app.schemas.document_upload import (
     DocumentUploadMetadata,
     DocumentUploadResponse,
 )
+from app.services.document_pipeline_service import (
+    DocumentPipelineService,
+)
 from app.services.document_service import DocumentService
 from app.services.document_validation_service import (
     MAXIMUM_DOCUMENT_SIZE_BYTES,
-)
-from app.services.document_pipeline_service import (
-    DocumentPipelineService,
 )
 
 DocumentPipelineServiceDependency = Annotated[
@@ -163,10 +163,7 @@ async def upload_document(
             "description": "Document not found.",
         },
         status.HTTP_409_CONFLICT: {
-            "description": (
-                "The document cannot be processed from "
-                "its current lifecycle state."
-            ),
+            "description": ("The document cannot be processed from its current lifecycle state."),
         },
     },
 )
@@ -195,9 +192,7 @@ async def process_document(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
-                "error_code": (
-                    "document_processing_conflict"
-                ),
+                "error_code": ("document_processing_conflict"),
                 "message": str(error),
                 "document_id": document_id,
                 "details": {},
@@ -206,51 +201,6 @@ async def process_document(
 
     background_tasks.add_task(
         pipeline_service.process_document,
-        document_id,
-    )
-
-    return response
-
-async def process_document(
-    document_id: str,
-    background_tasks: BackgroundTasks,
-    processing_service: (
-        DocumentPipelineServiceDependency
-    ),
-) -> DocumentProcessResponse:
-    """Queue one stored document for extraction."""
-
-    try:
-        response = (
-            await processing_service.request_extraction(
-                document_id,
-            )
-        )
-    except DocumentNotFoundError as error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "error_code": "document_not_found",
-                "message": str(error),
-                "document_id": document_id,
-                "details": {},
-            },
-        ) from error
-    except DocumentConflictError as error:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "error_code": (
-                    "document_processing_conflict"
-                ),
-                "message": str(error),
-                "document_id": document_id,
-                "details": {},
-            },
-        ) from error
-
-    background_tasks.add_task(
-        processing_service.extract_document,
         document_id,
     )
 

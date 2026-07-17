@@ -1,10 +1,6 @@
 import asyncio
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from app.schemas.document_upload import (
-    DocumentLifecycleStatus,
-    DocumentProcessResponse,
-)
 
 from app.core.exceptions import (
     DocumentConflictError,
@@ -16,7 +12,10 @@ from app.repositories.extracted_document import (
 )
 from app.schemas.assessment import utc_now
 from app.schemas.document import ExtractedDocument
-from app.schemas.document_upload import DocumentLifecycleStatus
+from app.schemas.document_upload import (
+    DocumentLifecycleStatus,
+    DocumentProcessResponse,
+)
 from app.services.document_extraction_service import DocumentExtractionService
 from app.storage.document_storage import DocumentStorageProtocol
 
@@ -42,22 +41,18 @@ class DocumentProcessingService:
     ) -> DocumentProcessResponse:
         """Atomically queue one document for extraction."""
 
-        record = (
-            await self._document_repository.claim_extraction(
-                document_id=document_id,
-                updated_at=utc_now(),
-            )
+        record = await self._document_repository.claim_extraction(
+            document_id=document_id,
+            updated_at=utc_now(),
         )
 
         return DocumentProcessResponse(
             document_id=record.document_id,
             lifecycle_status=record.lifecycle_status,
             processing_accepted=True,
-            message=(
-                "Document extraction was accepted and queued."
-            ),
+            message=("Document extraction was accepted and queued."),
         )
-    
+
     async def extract_document(self, document_id: str) -> ExtractedDocument:
         """Extract one stored PDF or UTF-8 text document."""
 
@@ -65,13 +60,9 @@ class DocumentProcessingService:
             document_id,
         )
 
-        if (
-            record.lifecycle_status
-            is not DocumentLifecycleStatus.EXTRACTION_PENDING
-        ):
+        if record.lifecycle_status is not DocumentLifecycleStatus.EXTRACTION_PENDING:
             raise DocumentConflictError(
-                "Document extraction requires lifecycle status "
-                "'extraction_pending'."
+                "Document extraction requires lifecycle status 'extraction_pending'."
             )
 
         running_record = record.model_copy(

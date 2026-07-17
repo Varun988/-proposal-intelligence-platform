@@ -1,7 +1,4 @@
 import pytest
-from app.services.document_pipeline_service import (
-    DocumentPipelineService,
-)
 
 from app.documents.parsers import (
     PypdfPDFParser,
@@ -32,6 +29,9 @@ from app.services.document_chunking_service import (
 from app.services.document_extraction_service import (
     DocumentExtractionService,
 )
+from app.services.document_pipeline_service import (
+    DocumentPipelineService,
+)
 from app.services.document_processing_service import (
     DocumentProcessingService,
 )
@@ -42,7 +42,15 @@ from app.services.document_validation_service import (
 from app.storage.document_storage import (
     InMemoryDocumentStorage,
 )
-
+from app.rag.vector_store.faiss_store import FaissVectorStore
+from app.repositories.assessment_vector_index import (
+    InMemoryAssessmentVectorIndexRegistry,
+)
+from app.services.document_indexing_service import (
+    DocumentIndexingService,
+)
+from app.services.embedding_service import EmbeddingService
+from tests.embedding_fakes import FakeEmbeddingProvider
 
 def create_services() -> tuple[
     DocumentService,
@@ -56,7 +64,19 @@ def create_services() -> tuple[
     extracted_repository = InMemoryExtractedDocumentRepository()
 
     chunk_repository = InMemoryDocumentChunkRepository()
+    embedding_provider = FakeEmbeddingProvider(
+        dimension=3,
+    )
 
+    embedding_service = EmbeddingService(
+        provider=embedding_provider,
+    )
+
+    index_registry = InMemoryAssessmentVectorIndexRegistry(
+        vector_store_factory=lambda dimension: FaissVectorStore(
+            dimension=dimension,
+        ),
+    )
     storage = InMemoryDocumentStorage()
 
     registry = DocumentParserRegistry()
@@ -88,12 +108,17 @@ def create_services() -> tuple[
             ),
         ),
     )
-
+    indexing_service = DocumentIndexingService(
+        document_repository=document_repository,
+        chunk_repository=chunk_repository,
+        index_registry=index_registry,
+        embedding_service=embedding_service,
+    )
     pipeline_service = DocumentPipelineService(
         extraction_service=extraction_service,
-        chunk_processing_service=(chunk_processing_service),
+        chunk_processing_service=chunk_processing_service,
+        indexing_service=indexing_service,
     )
-
     upload_service = DocumentService(
         repository=document_repository,
         storage=storage,
@@ -108,7 +133,7 @@ def create_services() -> tuple[
 
 
 @pytest.mark.asyncio
-async def test_pipeline_processes_document_to_chunked() -> None:
+async def test_pipeline_processes_document_to_indexed() -> None:
     (
         upload_service,
         pipeline_service,
@@ -144,7 +169,7 @@ async def test_pipeline_processes_document_to_chunked() -> None:
         upload.document_id,
     )
 
-    assert status.lifecycle_status is DocumentLifecycleStatus.CHUNKED
+    assert status.lifecycle_status is DocumentLifecycleStatus.INDEXED
     assert status.page_count == 1
     assert status.extracted_character_count == 27
     assert status.chunk_count == 1

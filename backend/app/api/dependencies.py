@@ -1,49 +1,64 @@
 from functools import lru_cache
 
+from app.core.config import get_settings
+from app.documents.parsers import (
+    PypdfPDFParser,
+    Utf8TextDocumentParser,
+)
+from app.documents.registry import DocumentParserRegistry
+from app.rag.chunking import PageAwareDocumentChunker
+from app.rag.embeddings.sentence_transformer import (
+    SentenceTransformerEmbeddingProvider,
+)
+from app.rag.vector_store.faiss_store import (
+    FaissVectorStore,
+)
 from app.repositories.assessment import InMemoryAssessmentRepository
+from app.repositories.assessment_vector_index import (
+    InMemoryAssessmentVectorIndexRegistry,
+)
+from app.repositories.document import (
+    InMemoryDocumentRepository,
+)
+from app.repositories.document_chunk import (
+    InMemoryDocumentChunkRepository,
+)
+from app.repositories.extracted_document import (
+    InMemoryExtractedDocumentRepository,
+)
 from app.services.assessment_execution_service import (
     AssessmentExecutionService,
     AssessmentWorkflowExecutorProtocol,
     UnavailableAssessmentWorkflowExecutor,
 )
 from app.services.assessment_service import AssessmentService
-from app.repositories.document import (
-    InMemoryDocumentRepository,
-)
-from app.services.document_service import DocumentService
-from app.services.document_validation_service import (
-    DocumentValidationService,
-)
-from app.storage.document_storage import (
-    InMemoryDocumentStorage,
-)
-from app.documents.parsers import (
-    PypdfPDFParser,
-    Utf8TextDocumentParser,
-)
-from app.documents.registry import DocumentParserRegistry
-from app.repositories.extracted_document import (
-    InMemoryExtractedDocumentRepository,
-)
-from app.services.document_extraction_service import (
-    DocumentExtractionService,
-)
-from app.services.document_processing_service import (
-    DocumentProcessingService,
-)
-from app.rag.chunking import PageAwareDocumentChunker
-from app.repositories.document_chunk import (
-    InMemoryDocumentChunkRepository,
-)
 from app.services.document_chunk_processing_service import (
     DocumentChunkProcessingService,
 )
 from app.services.document_chunking_service import (
     DocumentChunkingService,
 )
+from app.services.document_extraction_service import (
+    DocumentExtractionService,
+)
+from app.services.document_indexing_service import (
+    DocumentIndexingService,
+)
 from app.services.document_pipeline_service import (
     DocumentPipelineService,
 )
+from app.services.document_processing_service import (
+    DocumentProcessingService,
+)
+from app.services.document_service import DocumentService
+from app.services.document_validation_service import (
+    DocumentValidationService,
+)
+from app.services.embedding_service import EmbeddingService
+from app.storage.document_storage import (
+    InMemoryDocumentStorage,
+)
+
 
 @lru_cache
 def get_assessment_repository() -> InMemoryAssessmentRepository:
@@ -77,24 +92,21 @@ def get_assessment_execution_service() -> AssessmentExecutionService:
 
 
 @lru_cache
-def get_document_repository(
-) -> InMemoryDocumentRepository:
+def get_document_repository() -> InMemoryDocumentRepository:
     """Return the shared document metadata repository."""
 
     return InMemoryDocumentRepository()
 
 
 @lru_cache
-def get_document_storage(
-) -> InMemoryDocumentStorage:
+def get_document_storage() -> InMemoryDocumentStorage:
     """Return the shared binary document storage."""
 
     return InMemoryDocumentStorage()
 
 
 @lru_cache
-def get_document_validation_service(
-) -> DocumentValidationService:
+def get_document_validation_service() -> DocumentValidationService:
     """Return the document validation service."""
 
     return DocumentValidationService()
@@ -107,22 +119,19 @@ def get_document_service() -> DocumentService:
     return DocumentService(
         repository=get_document_repository(),
         storage=get_document_storage(),
-        validation_service=(
-            get_document_validation_service()
-        ),
+        validation_service=(get_document_validation_service()),
     )
 
+
 @lru_cache
-def get_extracted_document_repository(
-) -> InMemoryExtractedDocumentRepository:
+def get_extracted_document_repository() -> InMemoryExtractedDocumentRepository:
     """Return the extracted-document repository."""
 
     return InMemoryExtractedDocumentRepository()
 
 
 @lru_cache
-def get_document_parser_registry(
-) -> DocumentParserRegistry:
+def get_document_parser_registry() -> DocumentParserRegistry:
     """Return the configured document parser registry."""
 
     registry = DocumentParserRegistry()
@@ -138,8 +147,7 @@ def get_document_parser_registry(
 
 
 @lru_cache
-def get_document_extraction_service(
-) -> DocumentExtractionService:
+def get_document_extraction_service() -> DocumentExtractionService:
     """Return the path-based extraction service."""
 
     return DocumentExtractionService(
@@ -148,32 +156,26 @@ def get_document_extraction_service(
 
 
 @lru_cache
-def get_document_processing_service(
-) -> DocumentProcessingService:
+def get_document_processing_service() -> DocumentProcessingService:
     """Return the document processing service."""
 
     return DocumentProcessingService(
         document_repository=get_document_repository(),
-        extracted_document_repository=(
-            get_extracted_document_repository()
-        ),
+        extracted_document_repository=(get_extracted_document_repository()),
         storage=get_document_storage(),
-        extraction_service=(
-            get_document_extraction_service()
-        ),
+        extraction_service=(get_document_extraction_service()),
     )
 
+
 @lru_cache
-def get_document_chunk_repository(
-) -> InMemoryDocumentChunkRepository:
+def get_document_chunk_repository() -> InMemoryDocumentChunkRepository:
     """Return the citation-ready chunk repository."""
 
     return InMemoryDocumentChunkRepository()
 
 
 @lru_cache
-def get_document_chunking_service(
-) -> DocumentChunkingService:
+def get_document_chunking_service() -> DocumentChunkingService:
     """Return the configured page-aware chunking service."""
 
     return DocumentChunkingService(
@@ -185,32 +187,63 @@ def get_document_chunking_service(
 
 
 @lru_cache
-def get_document_chunk_processing_service(
-) -> DocumentChunkProcessingService:
+def get_document_chunk_processing_service() -> DocumentChunkProcessingService:
     """Return the document chunk-processing service."""
 
     return DocumentChunkProcessingService(
         document_repository=get_document_repository(),
-        extracted_document_repository=(
-            get_extracted_document_repository()
-        ),
-        chunk_repository=(
-            get_document_chunk_repository()
-        ),
+        extracted_document_repository=(get_extracted_document_repository()),
+        chunk_repository=(get_document_chunk_repository()),
         chunking_service=get_document_chunking_service(),
     )
 
 
 @lru_cache
-def get_document_pipeline_service(
-) -> DocumentPipelineService:
-    """Return the extraction and chunking pipeline."""
+def get_embedding_service() -> EmbeddingService:
+    """Return the configured local embedding service."""
+
+    settings = get_settings()
+
+    provider = SentenceTransformerEmbeddingProvider(
+        model_name=settings.embedding_model,
+        normalize_embeddings=(settings.normalize_embeddings),
+    )
+
+    return EmbeddingService(
+        provider=provider,
+    )
+
+
+@lru_cache
+def get_assessment_vector_index_registry() -> InMemoryAssessmentVectorIndexRegistry:
+    """Return the assessment-isolated vector-index registry."""
+
+    return InMemoryAssessmentVectorIndexRegistry(
+        vector_store_factory=lambda dimension: FaissVectorStore(
+            dimension=dimension,
+            normalize_vectors=True,
+        )
+    )
+
+
+@lru_cache
+def get_document_indexing_service() -> DocumentIndexingService:
+    """Return the document indexing service."""
+
+    return DocumentIndexingService(
+        document_repository=get_document_repository(),
+        chunk_repository=get_document_chunk_repository(),
+        index_registry=(get_assessment_vector_index_registry()),
+        embedding_service=get_embedding_service(),
+    )
+
+
+@lru_cache
+def get_document_pipeline_service() -> DocumentPipelineService:
+    """Return the extraction, chunking, and indexing pipeline."""
 
     return DocumentPipelineService(
-        extraction_service=(
-            get_document_processing_service()
-        ),
-        chunk_processing_service=(
-            get_document_chunk_processing_service()
-        ),
+        extraction_service=(get_document_processing_service()),
+        chunk_processing_service=(get_document_chunk_processing_service()),
+        indexing_service=get_document_indexing_service(),
     )

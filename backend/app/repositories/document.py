@@ -1,17 +1,16 @@
 import asyncio
-from typing import Protocol
 from datetime import datetime
+from typing import Protocol
+
 from app.core.exceptions import (
     DocumentConflictError,
     DocumentNotFoundError,
 )
 from app.schemas.document_upload import (
-    StoredDocumentRecord,
-)
-from app.schemas.document_upload import (
     DocumentLifecycleStatus,
     StoredDocumentRecord,
 )
+
 
 class DocumentRepositoryProtocol(Protocol):
     """Persistence contract for document metadata."""
@@ -61,6 +60,7 @@ class DocumentRepositoryProtocol(Protocol):
     ) -> StoredDocumentRecord:
         """Atomically claim a stored document for extraction."""
 
+
 class InMemoryDocumentRepository:
     """Concurrency-safe in-memory document repository."""
 
@@ -79,18 +79,13 @@ class InMemoryDocumentRepository:
 
         async with self._lock:
             if record.document_id in self._records:
-                raise DocumentConflictError(
-                    "Document already exists: "
-                    f"{record.document_id}."
-                )
+                raise DocumentConflictError(f"Document already exists: {record.document_id}.")
 
             stored_record = record.model_copy(
                 deep=True,
             )
 
-            self._records[record.document_id] = (
-                stored_record
-            )
+            self._records[record.document_id] = stored_record
 
             return stored_record.model_copy(
                 deep=True,
@@ -105,9 +100,7 @@ class InMemoryDocumentRepository:
         normalized_id = document_id.strip()
 
         if not normalized_id:
-            raise DocumentNotFoundError(
-                "Document ID cannot be empty."
-            )
+            raise DocumentNotFoundError("Document ID cannot be empty.")
 
         async with self._lock:
             record = self._records.get(
@@ -115,10 +108,7 @@ class InMemoryDocumentRepository:
             )
 
             if record is None:
-                raise DocumentNotFoundError(
-                    "Document not found: "
-                    f"{normalized_id}."
-                )
+                raise DocumentNotFoundError(f"Document not found: {normalized_id}.")
 
             return record.model_copy(
                 deep=True,
@@ -134,9 +124,7 @@ class InMemoryDocumentRepository:
         normalized_id = document_id.strip()
 
         if not normalized_id:
-            raise DocumentNotFoundError(
-                "Document ID cannot be empty."
-            )
+            raise DocumentNotFoundError("Document ID cannot be empty.")
 
         async with self._lock:
             record = self._records.get(
@@ -144,31 +132,19 @@ class InMemoryDocumentRepository:
             )
 
             if record is None:
-                raise DocumentNotFoundError(
-                    "Document not found: "
-                    f"{normalized_id}."
-                )
+                raise DocumentNotFoundError(f"Document not found: {normalized_id}.")
 
-            if (
-                record.lifecycle_status
-                is not DocumentLifecycleStatus.CHUNKED
-            ):
+            if record.lifecycle_status is not DocumentLifecycleStatus.CHUNKED:
                 raise DocumentConflictError(
-                    "Document indexing can only be requested "
-                    "for a chunked document."
+                    "Document indexing can only be requested for a chunked document."
                 )
 
             if not record.assessment_id:
-                raise DocumentConflictError(
-                    "Document indexing requires an assessment ID."
-                )
+                raise DocumentConflictError("Document indexing requires an assessment ID.")
 
             pending_record = record.model_copy(
                 update={
-                    "lifecycle_status": (
-                        DocumentLifecycleStatus
-                        .INDEXING_PENDING
-                    ),
+                    "lifecycle_status": (DocumentLifecycleStatus.INDEXING_PENDING),
                     "error_message": None,
                     "updated_at": updated_at,
                 },
@@ -180,7 +156,7 @@ class InMemoryDocumentRepository:
             return pending_record.model_copy(
                 deep=True,
             )
-        
+
     async def update(
         self,
         record: StoredDocumentRecord,
@@ -189,23 +165,18 @@ class InMemoryDocumentRepository:
 
         async with self._lock:
             if record.document_id not in self._records:
-                raise DocumentNotFoundError(
-                    "Document not found: "
-                    f"{record.document_id}."
-                )
+                raise DocumentNotFoundError(f"Document not found: {record.document_id}.")
 
             stored_record = record.model_copy(
                 deep=True,
             )
 
-            self._records[record.document_id] = (
-                stored_record
-            )
+            self._records[record.document_id] = stored_record
 
             return stored_record.model_copy(
                 deep=True,
             )
-        
+
     async def claim_chunking(
         self,
         document_id: str,
@@ -216,9 +187,7 @@ class InMemoryDocumentRepository:
         normalized_id = document_id.strip()
 
         if not normalized_id:
-            raise DocumentNotFoundError(
-                "Document ID cannot be empty."
-            )
+            raise DocumentNotFoundError("Document ID cannot be empty.")
 
         async with self._lock:
             record = self._records.get(
@@ -226,26 +195,16 @@ class InMemoryDocumentRepository:
             )
 
             if record is None:
-                raise DocumentNotFoundError(
-                    "Document not found: "
-                    f"{normalized_id}."
-                )
+                raise DocumentNotFoundError(f"Document not found: {normalized_id}.")
 
-            if (
-                record.lifecycle_status
-                is not DocumentLifecycleStatus.EXTRACTED
-            ):
+            if record.lifecycle_status is not DocumentLifecycleStatus.EXTRACTED:
                 raise DocumentConflictError(
-                    "Document chunking can only be requested "
-                    "for an extracted document."
+                    "Document chunking can only be requested for an extracted document."
                 )
 
             pending_record = record.model_copy(
                 update={
-                    "lifecycle_status": (
-                        DocumentLifecycleStatus
-                        .CHUNKING_PENDING
-                    ),
+                    "lifecycle_status": (DocumentLifecycleStatus.CHUNKING_PENDING),
                     "error_message": None,
                     "updated_at": updated_at,
                 },
@@ -257,7 +216,7 @@ class InMemoryDocumentRepository:
             return pending_record.model_copy(
                 deep=True,
             )
-                
+
     async def claim_extraction(
         self,
         document_id: str,
@@ -268,9 +227,7 @@ class InMemoryDocumentRepository:
         normalized_id = document_id.strip()
 
         if not normalized_id:
-            raise DocumentNotFoundError(
-                "Document ID cannot be empty."
-            )
+            raise DocumentNotFoundError("Document ID cannot be empty.")
 
         async with self._lock:
             record = self._records.get(
@@ -278,26 +235,16 @@ class InMemoryDocumentRepository:
             )
 
             if record is None:
-                raise DocumentNotFoundError(
-                    "Document not found: "
-                    f"{normalized_id}."
-                )
+                raise DocumentNotFoundError(f"Document not found: {normalized_id}.")
 
-            if (
-                record.lifecycle_status
-                is not DocumentLifecycleStatus.STORED
-            ):
+            if record.lifecycle_status is not DocumentLifecycleStatus.STORED:
                 raise DocumentConflictError(
-                    "Document extraction can only be requested "
-                    "for a stored document."
+                    "Document extraction can only be requested for a stored document."
                 )
 
             pending_record = record.model_copy(
                 update={
-                    "lifecycle_status": (
-                        DocumentLifecycleStatus
-                        .EXTRACTION_PENDING
-                    ),
+                    "lifecycle_status": (DocumentLifecycleStatus.EXTRACTION_PENDING),
                     "error_message": None,
                     "updated_at": updated_at,
                 },
@@ -309,7 +256,7 @@ class InMemoryDocumentRepository:
             return pending_record.model_copy(
                 deep=True,
             )
-        
+
     async def exists(
         self,
         document_id: str,

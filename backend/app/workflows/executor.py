@@ -42,14 +42,9 @@ class LangGraphAssessmentWorkflowExecutor:
             field_name="assessment_id",
         )
 
-        if (
-            result_assessment_id is not None
-            and result_assessment_id
-            != state.assessment_id
-        ):
+        if result_assessment_id is not None and result_assessment_id != state.assessment_id:
             raise AssessmentExecutionError(
-                "The assessment LangGraph returned a mismatched "
-                "assessment ID."
+                "The assessment LangGraph returned a mismatched assessment ID."
             )
 
         result_proposal_document_id = self._read_identity(
@@ -59,19 +54,15 @@ class LangGraphAssessmentWorkflowExecutor:
 
         if (
             result_proposal_document_id is not None
-            and result_proposal_document_id
-            != state.proposal_document_id
+            and result_proposal_document_id != state.proposal_document_id
         ):
             raise AssessmentExecutionError(
-                "The assessment LangGraph returned a mismatched "
-                "proposal document ID."
+                "The assessment LangGraph returned a mismatched proposal document ID."
             )
 
         try:
-            final_state = (
-                AssessmentWorkflowState.model_validate(
-                    result,
-                )
+            final_state = AssessmentWorkflowState.model_validate(
+                result,
             )
         except Exception as error:
             raise AssessmentExecutionError(
@@ -80,17 +71,12 @@ class LangGraphAssessmentWorkflowExecutor:
 
         if final_state.assessment_id != state.assessment_id:
             raise AssessmentExecutionError(
-                "The assessment LangGraph returned a mismatched "
-                "assessment ID."
+                "The assessment LangGraph returned a mismatched assessment ID."
             )
 
-        if (
-            final_state.proposal_document_id
-            != state.proposal_document_id
-        ):
+        if final_state.proposal_document_id != state.proposal_document_id:
             raise AssessmentExecutionError(
-                "The assessment LangGraph returned a mismatched "
-                "proposal document ID."
+                "The assessment LangGraph returned a mismatched proposal document ID."
             )
         return final_state
 

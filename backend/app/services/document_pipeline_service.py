@@ -4,21 +4,26 @@ from app.schemas.document_upload import (
 from app.services.document_chunk_processing_service import (
     DocumentChunkProcessingService,
 )
+from app.services.document_indexing_service import (
+    DocumentIndexingService,
+)
 from app.services.document_processing_service import (
     DocumentProcessingService,
 )
 
 
 class DocumentPipelineService:
-    """Coordinate document extraction and chunking."""
+    """Coordinate extraction, chunking, and indexing."""
 
     def __init__(
         self,
         extraction_service: DocumentProcessingService,
-        chunk_processing_service: (DocumentChunkProcessingService),
+        chunk_processing_service: DocumentChunkProcessingService,
+        indexing_service: DocumentIndexingService,
     ) -> None:
         self._extraction_service = extraction_service
         self._chunk_processing_service = chunk_processing_service
+        self._indexing_service = indexing_service
 
     async def request_processing(
         self,
@@ -34,7 +39,7 @@ class DocumentPipelineService:
         self,
         document_id: str,
     ) -> None:
-        """Extract and chunk one queued document."""
+        """Extract, chunk, embed, and index one queued document."""
 
         await self._extraction_service.extract_document(
             document_id,
@@ -45,5 +50,13 @@ class DocumentPipelineService:
         )
 
         await self._chunk_processing_service.chunk_document(
+            document_id,
+        )
+
+        await self._indexing_service.request_indexing(
+            document_id,
+        )
+
+        await self._indexing_service.index_document(
             document_id,
         )
