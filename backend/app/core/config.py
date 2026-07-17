@@ -21,9 +21,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = Field(default="", repr=False)
 
     embedding_provider: str = "sentence-transformers"
-    embedding_model: str = (
-        "sentence-transformers/all-MiniLM-L6-v2"
-    )
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     normalize_embeddings: bool = True
 
     max_agent_steps: int = Field(default=12, ge=1, le=50)
