@@ -189,6 +189,37 @@ class RiskReportAgent:
         return result
 
     @staticmethod
+    def _normalize_source_agent(
+        source_agent: str,
+    ) -> str:
+        """Normalize recognized specialist-agent aliases."""
+
+        normalized_value = (
+            source_agent.strip()
+            .casefold()
+            .replace("_", "-")
+            .replace(" ", "-")
+        )
+
+        while "--" in normalized_value:
+            normalized_value = normalized_value.replace(
+                "--",
+                "-",
+            )
+
+        source_agent_aliases = {
+            "proposal-analysis": "proposal-analysis",
+            "proposal-analysis-agent": "proposal-analysis",
+            "vendor-research": "vendor-research",
+            "vendor-research-agent": "vendor-research",
+        }
+
+        return source_agent_aliases.get(
+            normalized_value,
+            source_agent,
+        )
+
+    @staticmethod
     def _canonicalize_result(
         result: RiskReportResult,
         risk_input: RiskReportInput,
