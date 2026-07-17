@@ -45,7 +45,7 @@ DocumentServiceDependency = Annotated[
     response_model=DocumentUploadResponse,
     status_code=status.HTTP_201_CREATED,
     responses={
-        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {
             "description": ("The uploaded document or its metadata failed validation."),
         },
         status.HTTP_500_INTERNAL_SERVER_ERROR: {
@@ -99,7 +99,7 @@ async def upload_document(
             )
         except ValidationError as error:
             raise HTTPException(
-                status_code=(status.HTTP_422_UNPROCESSABLE_ENTITY),
+                status_code=(status.HTTP_422_UNPROCESSABLE_CONTENT),
                 detail={
                     "error_code": ("document_metadata_invalid"),
                     "message": ("The document metadata failed validation."),
@@ -118,7 +118,7 @@ async def upload_document(
 
     except DocumentValidationError as error:
         raise HTTPException(
-            status_code=(status.HTTP_422_UNPROCESSABLE_ENTITY),
+            status_code=(status.HTTP_422_UNPROCESSABLE_CONTENT),
             detail={
                 "error_code": "document_validation_failed",
                 "message": str(error),
