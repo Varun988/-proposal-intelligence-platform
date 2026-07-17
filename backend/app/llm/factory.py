@@ -22,9 +22,7 @@ class LLMProviderFactory:
         normalized_name = self._normalize_name(provider_name)
 
         if normalized_name in self._builders:
-            raise LLMConfigurationError(
-                f"LLM provider '{normalized_name}' is already registered."
-            )
+            raise LLMConfigurationError(f"LLM provider '{normalized_name}' is already registered.")
 
         self._builders[normalized_name] = builder
 
@@ -55,8 +53,6 @@ class LLMProviderFactory:
         normalized_name = provider_name.strip().lower()
 
         if not normalized_name:
-            raise LLMConfigurationError(
-                "LLM provider name cannot be empty."
-            )
+            raise LLMConfigurationError("LLM provider name cannot be empty.")
 
         return normalized_name
