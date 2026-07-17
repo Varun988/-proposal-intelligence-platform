@@ -128,3 +128,23 @@ class ToolInputValidationError(ToolError):
 
 class ToolExecutionError(ToolError):
     """Raised when a tool fails during execution."""
+
+
+class AgentError(ApplicationError):
+    """Base exception for agent-related failures."""
+
+
+class AgentConfigurationError(AgentError):
+    """Raised when an agent is incorrectly configured."""
+
+
+class AgentExecutionError(AgentError):
+    """Raised when an agent cannot complete its task."""
+
+
+class AgentToolLimitError(AgentExecutionError):
+    """Raised when an agent exceeds its permitted tool-call limit."""
+
+
+class AgentOutputValidationError(AgentExecutionError):
+    """Raised when an agent returns invalid structured output."""
