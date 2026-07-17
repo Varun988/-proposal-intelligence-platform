@@ -41,6 +41,51 @@ from app.agents.risk_report.schemas import (
     SynthesizedRisk,
 )
 
+
+def create_fake_proposal_result(
+    assessment_id: str = "assessment-001",
+    proposal_document_id: str = "proposal-001",
+) -> ProposalAnalysisResult:
+    """Create a reusable fake Proposal Analysis result."""
+
+    evidence = EvidenceReference(
+        chunk_id="chunk-001",
+        document_id=proposal_document_id,
+        file_name="synthetic-proposal.pdf",
+        page_number=4,
+        citation_label="synthetic-proposal.pdf, page 4",
+        supporting_text=("The implementation timeline is twelve months."),
+        retrieval_score=0.90,
+        final_score=0.95,
+    )
+
+    return ProposalAnalysisResult(
+        assessment_id=assessment_id,
+        proposal_document_id=proposal_document_id,
+        summary=ProposalSummary(
+            delivery_timeline="Twelve months",
+        ),
+        findings=[
+            ProposalFinding(
+                finding_id="finding-001",
+                category=FindingCategory.DELIVERY,
+                title="Twelve-month delivery timeline",
+                description=("The proposal states a twelve-month implementation timeline."),
+                severity=FindingSeverity.MEDIUM,
+                confidence=FindingConfidence.HIGH,
+                evidence=[
+                    evidence.model_copy(deep=True),
+                ],
+                recommendation=("Confirm alignment with the target date."),
+                human_review_required=True,
+            )
+        ],
+        executive_summary=("The proposal contains a twelve-month timeline."),
+        overall_confidence=FindingConfidence.HIGH,
+        human_review_required=True,
+    )
+
+
 class FakeProposalAnalysisAgent:
     """Deterministic Proposal Analysis Agent for workflow tests."""
 
@@ -219,7 +264,6 @@ class FakeVendorResearchAgent:
         )
 
 
-
 class FakeRiskReportAgent:
     """Deterministic Risk and Report Agent for workflow tests."""
 
@@ -242,9 +286,7 @@ class FakeRiskReportAgent:
 
         proposal_finding = risk_input.proposal_analysis.findings[0]
         source_finding_id = (
-            "unknown-finding"
-            if self.invalid_source_reference
-            else proposal_finding.finding_id
+            "unknown-finding" if self.invalid_source_reference else proposal_finding.finding_id
         )
 
         risk = SynthesizedRisk(
@@ -258,9 +300,7 @@ class FakeRiskReportAgent:
                 RiskEvidenceReference(
                     source_agent="proposal-analysis",
                     source_finding_id=source_finding_id,
-                    proposal_evidence=(
-                        proposal_finding.evidence[0].model_copy(deep=True)
-                    ),
+                    proposal_evidence=(proposal_finding.evidence[0].model_copy(deep=True)),
                 )
             ],
             business_impact="Schedule misalignment may delay go-live.",

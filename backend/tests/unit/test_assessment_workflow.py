@@ -76,15 +76,33 @@ def create_state(
 def create_graph(
     proposal_agent: FakeProposalAnalysisAgent | None = None,
     vendor_agent: FakeVendorResearchAgent | None = None,
+    risk_agent: FakeRiskReportAgent | None = None,
 ):
-    """Create the complete assessment graph for tests."""
+    """Create the complete four-agent assessment graph."""
 
     return create_assessment_graph(
         orchestrator_agent=OrchestratorAgent(),
-        proposal_analysis_agent=(proposal_agent or FakeProposalAnalysisAgent()),
-        proposal_evaluation_runner=(create_proposal_analysis_evaluation_runner()),
-        vendor_research_agent=(vendor_agent or FakeVendorResearchAgent()),
-        vendor_evaluation_runner=(create_vendor_research_evaluation_runner()),
+        proposal_analysis_agent=(
+            proposal_agent
+            or FakeProposalAnalysisAgent()
+        ),
+        proposal_evaluation_runner=(
+            create_proposal_analysis_evaluation_runner()
+        ),
+        vendor_research_agent=(
+            vendor_agent
+            or FakeVendorResearchAgent()
+        ),
+        vendor_evaluation_runner=(
+            create_vendor_research_evaluation_runner()
+        ),
+        risk_report_agent=(
+            risk_agent
+            or FakeRiskReportAgent()
+        ),
+        risk_report_evaluation_runner=(
+            create_risk_report_evaluation_runner()
+        ),
     )
 
 
@@ -104,8 +122,10 @@ async def test_workflow_routes_valid_execution_forward() -> None:
         result,
     )
 
-    assert final_state.status is WorkflowStatus.READY_FOR_NEXT_AGENT
-    assert final_state.human_review_required is False
+    assert final_state.status is WorkflowStatus.COMPLETED
+    assert final_state.human_review_required is True
+    assert final_state.human_review_reason is not None
+    assert "human" in final_state.human_review_reason.casefold()
 
     assert final_state.orchestrator_execution is not None
     assert final_state.proposal_analysis_execution is not None
@@ -115,7 +135,10 @@ async def test_workflow_routes_valid_execution_forward() -> None:
 
     assert final_state.proposal_analysis_evaluation.release_approved is True
     assert final_state.vendor_research_evaluation.release_approved is True
-
+    assert final_state.risk_report_execution is not None
+    assert final_state.risk_report_evaluation is not None
+    assert final_state.risk_report_passed is True
+    assert "risk-report" in final_state.completed_agents
     assert "orchestrator" in final_state.completed_agents
     assert "proposal-analysis" in final_state.completed_agents
     assert "vendor-research" in final_state.completed_agents
@@ -146,7 +169,7 @@ async def test_workflow_executes_vendor_research() -> None:
     assert "vendor-research" in final_state.completed_agents
     assert len(vendor_agent.received_inputs) == 1
 
-    assert final_state.status is WorkflowStatus.READY_FOR_NEXT_AGENT
+    assert final_state.status is WorkflowStatus.COMPLETED
 
 
 @pytest.mark.asyncio
@@ -165,11 +188,14 @@ async def test_workflow_skips_unplanned_vendor_research() -> None:
         result,
     )
 
-    assert final_state.status is WorkflowStatus.READY_FOR_NEXT_AGENT
+    assert final_state.status is WorkflowStatus.COMPLETED
     assert final_state.vendor_research_execution is None
     assert final_state.vendor_research_evaluation is None
     assert "vendor-research" not in final_state.completed_agents
     assert vendor_agent.received_inputs == []
+    assert final_state.risk_report_execution is not None
+    assert final_state.risk_report_evaluation is not None
+    assert "risk-report" in final_state.completed_agents
 
 
 @pytest.mark.asyncio
@@ -285,10 +311,14 @@ async def test_workflow_records_agent_and_evaluation_results() -> None:
         result,
     )
 
-    assert [record.agent_name for record in final_state.agent_execution_records] == [
+    assert [
+        record.agent_name
+        for record in final_state.agent_execution_records
+    ] == [
         "orchestrator",
         "proposal-analysis",
         "vendor-research",
+        "risk-report",
     ]
 
     assert all(record.succeeded for record in final_state.agent_execution_records)
@@ -296,6 +326,7 @@ async def test_workflow_records_agent_and_evaluation_results() -> None:
     assert [record.agent_name for record in final_state.evaluation_records] == [
         "proposal-analysis",
         "vendor-research",
+        "risk-report",
     ]
 
     assert all(record.release_approved for record in final_state.evaluation_records)
@@ -315,10 +346,11 @@ async def test_workflow_records_auditable_events() -> None:
 
     assert "orchestration_started" in event_types
     assert "orchestration_completed" in event_types
-    assert event_types.count("agent_started") == 2
-    assert event_types.count("agent_completed") == 2
-    assert event_types.count("evaluation_started") == 2
-    assert event_types.count("evaluation_completed") == 2
+    assert event_types.count("agent_started") == 3
+    assert event_types.count("agent_completed") == 3
+    assert event_types.count("evaluation_started") == 3
+    assert event_types.count("evaluation_completed") == 3
+    assert "workflow_completed" in event_types
     assert "status_changed" in event_types
 
 
