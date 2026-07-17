@@ -64,6 +64,12 @@ class AssessmentRepositoryProtocol(Protocol):
     ) -> bool:
         """Return whether an assessment exists."""
 
+    async def claim_execution(
+        self,
+        assessment_id: str,
+        updated_at: datetime,
+    ) -> AssessmentRecord:
+        """Atomically claim an assessment for execution."""
 
 class InMemoryAssessmentRepository:
     """Concurrency-safe in-memory assessment repository."""
@@ -154,3 +160,52 @@ class InMemoryAssessmentRepository:
 
         async with self._lock:
             self._records.clear()
+
+    async def claim_execution(
+        self,
+        assessment_id: str,
+        updated_at: datetime,
+    ) -> AssessmentRecord:
+        """Atomically claim an assessment for execution."""
+
+        normalized_id = assessment_id.strip()
+
+        if not normalized_id:
+            raise AssessmentNotFoundError(
+                "Assessment ID cannot be empty."
+            )
+
+        async with self._lock:
+            record = self._records.get(
+                normalized_id,
+            )
+
+            if record is None:
+                raise AssessmentNotFoundError(
+                    "Assessment not found: "
+                    f"{normalized_id}."
+                )
+
+            if record.execution_requested:
+                raise AssessmentConflictError(
+                    "Assessment execution has already been requested."
+                )
+
+            updated_record = record.model_copy(
+                update={
+                    "execution_requested": True,
+                    "lifecycle_status": (
+                        AssessmentLifecycleStatus.QUEUED
+                    ),
+                    "updated_at": updated_at,
+                },
+                deep=True,
+            )
+
+            self._records[normalized_id] = (
+                updated_record
+            )
+
+            return updated_record.model_copy(
+                deep=True,
+            )
