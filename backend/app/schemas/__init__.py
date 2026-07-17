@@ -9,6 +9,11 @@ from app.schemas.document import (
     DocumentType,
     ExtractedDocument,
 )
+from app.schemas.embedding import (
+    EmbeddedChunk,
+    EmbeddingBatchResult,
+    EmbeddingVector,
+)
 from app.schemas.health import HealthResponse
 from app.schemas.llm import (
     LLMMessage,
@@ -16,6 +21,10 @@ from app.schemas.llm import (
     LLMResponse,
     MessageRole,
     TokenUsage,
+)
+from app.schemas.retrieval import (
+    VectorSearchResponse,
+    VectorSearchResult,
 )
 
 __all__ = [
@@ -25,6 +34,9 @@ __all__ = [
     "DocumentMetadata",
     "DocumentPage",
     "DocumentType",
+    "EmbeddedChunk",
+    "EmbeddingBatchResult",
+    "EmbeddingVector",
     "ExtractedDocument",
     "HealthResponse",
     "LLMMessage",
@@ -32,4 +44,6 @@ __all__ = [
     "LLMResponse",
     "MessageRole",
     "TokenUsage",
+    "VectorSearchResponse",
+    "VectorSearchResult",
 ]

@@ -52,3 +52,35 @@ class DocumentChunkingError(DocumentError):
 
 class InvalidChunkingConfigurationError(DocumentChunkingError):
     """Raised when text-chunking configuration is invalid."""
+
+
+class EmbeddingError(ApplicationError):
+    """Base exception for embedding-related failures."""
+
+
+class EmbeddingConfigurationError(EmbeddingError):
+    """Raised when an embedding provider is incorrectly configured."""
+
+
+class EmbeddingProviderError(EmbeddingError):
+    """Raised when an embedding provider cannot generate vectors."""
+
+
+class EmbeddingDimensionError(EmbeddingError):
+    """Raised when generated embedding dimensions are inconsistent."""
+
+
+class VectorStoreError(ApplicationError):
+    """Base exception for vector-store failures."""
+
+
+class VectorStoreConfigurationError(VectorStoreError):
+    """Raised when a vector store is incorrectly configured."""
+
+
+class VectorDimensionMismatchError(VectorStoreError):
+    """Raised when vector dimensions do not match the index."""
+
+
+class EmptyVectorStoreError(VectorStoreError):
+    """Raised when a search is attempted against an empty vector store."""
