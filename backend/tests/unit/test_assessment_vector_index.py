@@ -41,6 +41,7 @@ def create_item(
         ),
         metadata={
             "assessment_id": "assessment-001",
+            "document_purpose": "proposal",
         },
     )
 
@@ -164,6 +165,33 @@ async def test_registry_rejects_duplicate_document() -> None:
             assessment_id="assessment-001",
             document_id="document-001",
             items=items,
+            embedding_provider="fake-provider",
+            embedding_model="fake-model",
+            vector_dimension=3,
+        )
+
+@pytest.mark.asyncio
+async def test_registry_rejects_missing_document_purpose(
+) -> None:
+    registry = create_registry()
+
+    item = create_item(
+        document_id="document-001",
+        chunk_id="chunk-001",
+    )
+
+    item.chunk.metadata.pop(
+        "document_purpose",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="require document-purpose metadata",
+    ):
+        await registry.add_document(
+            assessment_id="assessment-001",
+            document_id="document-001",
+            items=[item],
             embedding_provider="fake-provider",
             embedding_model="fake-model",
             vector_dimension=3,

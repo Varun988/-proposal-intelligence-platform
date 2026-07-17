@@ -1,6 +1,7 @@
 from app.services.assessment_retrieval_context_service import (
     AssessmentRetrievalContextService,
 )
+from app.services.retrieval_service import RetrievalService
 from app.tools.registry import ToolRegistry
 from app.tools.retrieval_tools import SearchEvidenceTool
 
@@ -10,7 +11,7 @@ class AgentScopedSearchEvidenceTool(SearchEvidenceTool):
 
     def __init__(
         self,
-        retrieval_service: object,
+        retrieval_service: RetrievalService,
         allowed_agent: str,
     ) -> None:
         super().__init__(retrieval_service=retrieval_service)
@@ -18,13 +19,13 @@ class AgentScopedSearchEvidenceTool(SearchEvidenceTool):
 
     @property
     def allowed_agents(self) -> tuple[str, ...]:
-        """Return the only specialist agent permitted to use this tool."""
+        """Return the only agent permitted to use this tool."""
 
         return (self._allowed_agent,)
 
 
 class AssessmentToolContextService:
-    """Create bounded, assessment-scoped specialist tool registries."""
+    """Create purpose and assessment-scoped specialist registries."""
 
     def __init__(
         self,
@@ -36,10 +37,14 @@ class AssessmentToolContextService:
         self,
         assessment_id: str,
     ) -> ToolRegistry:
-        """Create a proposal-analysis registry for one assessment."""
+        """Create a proposal-purpose registry for one assessment."""
 
-        return await self._create_registry(
-            assessment_id=assessment_id,
+        retrieval_service = (
+            await self._retrieval_context_service
+            .create_proposal_retrieval_service(assessment_id)
+        )
+        return self._create_registry(
+            retrieval_service=retrieval_service,
             allowed_agent="proposal-analysis",
         )
 
@@ -47,23 +52,23 @@ class AssessmentToolContextService:
         self,
         assessment_id: str,
     ) -> ToolRegistry:
-        """Create a vendor-research registry for one assessment."""
+        """Create a vendor-purpose registry for one assessment."""
 
-        return await self._create_registry(
-            assessment_id=assessment_id,
+        retrieval_service = (
+            await self._retrieval_context_service
+            .create_vendor_retrieval_service(assessment_id)
+        )
+        return self._create_registry(
+            retrieval_service=retrieval_service,
             allowed_agent="vendor-research",
         )
 
-    async def _create_registry(
-        self,
-        assessment_id: str,
+    @staticmethod
+    def _create_registry(
+        retrieval_service: RetrievalService,
         allowed_agent: str,
     ) -> ToolRegistry:
-        """Create one registry containing only scoped evidence search."""
-
-        retrieval_service = await self._retrieval_context_service.create_retrieval_service(
-            assessment_id
-        )
+        """Create one registry containing only bounded evidence search."""
 
         registry = ToolRegistry()
         registry.register(

@@ -14,13 +14,14 @@ from app.services.assessment_tool_context_service import (
 )
 from app.services.embedding_service import EmbeddingService
 from tests.embedding_fakes import FakeEmbeddingProvider
-
+from app.schemas.document_upload import DocumentPurpose
 
 def create_chunk(
     assessment_id: str,
     document_id: str,
     chunk_id: str,
     text: str,
+    purpose: DocumentPurpose = DocumentPurpose.PROPOSAL,
 ) -> DocumentChunk:
     """Create one assessment-associated evidence chunk."""
 
@@ -39,10 +40,9 @@ def create_chunk(
         ),
         metadata={
             "assessment_id": assessment_id,
-            "document_purpose": "proposal",
+            "document_purpose": purpose.value,
         },
     )
-
 
 def create_services() -> tuple[
     AssessmentToolContextService,
@@ -75,6 +75,7 @@ async def index_document(
     document_id: str,
     chunk_id: str,
     text: str,
+    purpose: DocumentPurpose = DocumentPurpose.PROPOSAL,
 ) -> None:
     """Embed and index one assessment document."""
 
@@ -83,8 +84,13 @@ async def index_document(
         document_id=document_id,
         chunk_id=chunk_id,
         text=text,
+        purpose=purpose,
     )
-    result = embedding_service.embed_chunks([chunk])
+
+    result = embedding_service.embed_chunks(
+        [chunk],
+    )
+
     await registry.add_document(
         assessment_id=assessment_id,
         document_id=document_id,
@@ -92,8 +98,8 @@ async def index_document(
         embedding_provider=result.provider_name,
         embedding_model=result.model_name,
         vector_dimension=result.dimension,
+        document_purpose=purpose,
     )
-
 
 @pytest.mark.asyncio
 async def test_proposal_registry_contains_only_evidence_search() -> None:
@@ -126,6 +132,7 @@ async def test_vendor_registry_is_restricted_to_vendor_agent() -> None:
         document_id="document-001",
         chunk_id="chunk-001",
         text="Vendor profile and financial evidence.",
+        purpose=DocumentPurpose.VENDOR_PROFILE,
     )
 
     tool_registry = await service.create_vendor_research_registry("assessment-001")
