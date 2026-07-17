@@ -131,4 +131,3 @@ class ToolRegistry:
             raise ToolRegistrationError("Tool and agent names cannot be empty.")
 
         return normalized_value
-

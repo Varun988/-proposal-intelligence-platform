@@ -67,6 +67,4 @@ class FailingTool(EchoTool):
         self,
         tool_input: BaseModel,
     ) -> BaseModel:
-        raise RuntimeError(
-            "Synthetic tool failure."
-        )
+        raise RuntimeError("Synthetic tool failure.")

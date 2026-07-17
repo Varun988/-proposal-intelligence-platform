@@ -92,10 +92,7 @@ def create_synthetic_chunks() -> list:
         ),
         create_chunk(
             chunk_id="pricing",
-            text=(
-                "The total proposed implementation price is "
-                "two million Australian dollars."
-            ),
+            text=("The total proposed implementation price is two million Australian dollars."),
             page_number=19,
             document_chunk_index=5,
         ),
@@ -109,13 +106,9 @@ def run_smoke_test() -> None:
 
     print("Loading local embedding model...")
 
-    embedding_provider = (
-        SentenceTransformerEmbeddingProvider(
-            model_name=settings.embedding_model,
-            normalize_embeddings=(
-                settings.normalize_embeddings
-            ),
-        )
+    embedding_provider = SentenceTransformerEmbeddingProvider(
+        model_name=settings.embedding_model,
+        normalize_embeddings=(settings.normalize_embeddings),
     )
 
     embedding_service = EmbeddingService(
@@ -161,10 +154,7 @@ def run_smoke_test() -> None:
     print()
     print("Local retrieval smoke test successful")
     print(f"Initial candidates: {response.metrics.initial_candidate_count}")
-    print(
-        "Candidates after deduplication: "
-        f"{response.metrics.deduplicated_candidate_count}"
-    )
+    print(f"Candidates after deduplication: {response.metrics.deduplicated_candidate_count}")
     print(f"Duplicates removed: {response.metrics.duplicate_count}")
     print(f"Final results: {response.metrics.final_result_count}")
     print(f"Total latency: {response.metrics.total_latency_ms:.2f} ms")
@@ -177,34 +167,21 @@ def run_smoke_test() -> None:
         print(f"Result {position}")
         print(f"Chunk ID: {candidate.chunk.chunk_id}")
         print(f"Citation: {candidate.citation_label}")
-        print(
-            "Retrieval score: "
-            f"{candidate.retrieval_score:.4f}"
-        )
-        print(
-            "Lexical score: "
-            f"{candidate.reranking_score:.4f}"
-        )
+        print(f"Retrieval score: {candidate.retrieval_score:.4f}")
+        print(f"Lexical score: {candidate.reranking_score:.4f}")
         print(f"Final score: {candidate.final_score:.4f}")
-        print(
-            "Merged duplicates: "
-            f"{candidate.duplicate_chunk_ids}"
-        )
+        print(f"Merged duplicates: {candidate.duplicate_chunk_ids}")
         print(f"Text: {candidate.chunk.text}")
         print()
 
     top_result = response.candidates[0]
 
     if "twelve months" not in top_result.chunk.text.casefold():
-        raise RuntimeError(
-            "Retrieval smoke test failed: delivery timeline "
-            "was not ranked first."
-        )
+        raise RuntimeError("Retrieval smoke test failed: delivery timeline was not ranked first.")
 
     if response.metrics.duplicate_count < 1:
         raise RuntimeError(
-            "Retrieval smoke test failed: the duplicate "
-            "delivery evidence was not removed."
+            "Retrieval smoke test failed: the duplicate delivery evidence was not removed."
         )
 
     print("Validation passed:")

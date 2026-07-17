@@ -80,9 +80,7 @@ class BaseTool(ABC):
                 payload,
             )
         except ValidationError as error:
-            raise ToolInputValidationError(
-                f"Invalid input for tool '{self.name}'."
-            ) from error
+            raise ToolInputValidationError(f"Invalid input for tool '{self.name}'.") from error
 
         try:
             raw_output = self.execute(validated_input)
@@ -92,9 +90,7 @@ class BaseTool(ABC):
         except ToolInputValidationError:
             raise
         except Exception as error:
-            raise ToolExecutionError(
-                f"Tool '{self.name}' execution failed."
-            ) from error
+            raise ToolExecutionError(f"Tool '{self.name}' execution failed.") from error
 
         return ToolExecutionResult(
             tool_name=self.name,
