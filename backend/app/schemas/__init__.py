@@ -1,3 +1,8 @@
+from app.schemas.chunk import (
+    ChunkCitation,
+    ChunkingResult,
+    DocumentChunk,
+)
 from app.schemas.document import (
     DocumentMetadata,
     DocumentPage,
@@ -14,6 +19,9 @@ from app.schemas.llm import (
 )
 
 __all__ = [
+    "ChunkCitation",
+    "ChunkingResult",
+    "DocumentChunk",
     "DocumentMetadata",
     "DocumentPage",
     "DocumentType",

@@ -44,3 +44,11 @@ class EncryptedDocumentError(DocumentExtractionError):
 
 class DocumentParserRegistrationError(DocumentError):
     """Raised when document parser registration is invalid."""
+
+
+class DocumentChunkingError(DocumentError):
+    """Raised when document content cannot be chunked."""
+
+
+class InvalidChunkingConfigurationError(DocumentChunkingError):
+    """Raised when text-chunking configuration is invalid."""
