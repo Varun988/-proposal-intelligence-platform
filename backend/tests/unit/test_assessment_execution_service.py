@@ -112,3 +112,50 @@ async def test_execution_request_rejects_duplicate() -> None:
         match="already been requested",
     ):
         await execution_service.request_execution(assessment_id)
+
+
+@pytest.mark.asyncio
+async def test_initial_workflow_state_is_not_preemptively_escalated(
+) -> None:
+    executor = FakeAssessmentWorkflowExecutor()
+
+    assessment_service, execution_service = (
+        create_services(executor)
+    )
+
+    created = await assessment_service.create_assessment(
+        AssessmentCreateRequest(
+            vendor_name="Example Digital Services",
+            proposal_document_id="proposal-001",
+        )
+    )
+
+    await execution_service.request_execution(
+        created.assessment_id,
+    )
+
+    await execution_service.execute_assessment(
+        created.assessment_id,
+    )
+
+    assert len(executor.received_states) == 1
+
+    initial_state = executor.received_states[0]
+
+    assert initial_state.human_review_required is False
+
+    assert (
+        initial_state
+        .orchestrator_input
+        .human_review_required
+        is True
+    )
+
+    assert initial_state.risk_report_input is not None
+
+    assert (
+        initial_state
+        .risk_report_input
+        .human_review_required
+        is True
+    )

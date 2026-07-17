@@ -11,16 +11,12 @@ from app.rag.chunking import PageAwareDocumentChunker
 from app.rag.embeddings.sentence_transformer import (
     SentenceTransformerEmbeddingProvider,
 )
-from app.rag.vector_store.faiss_store import (
-    FaissVectorStore,
-)
+from app.rag.vector_store.faiss_store import FaissVectorStore
 from app.repositories.assessment import InMemoryAssessmentRepository
 from app.repositories.assessment_vector_index import (
     InMemoryAssessmentVectorIndexRegistry,
 )
-from app.repositories.document import (
-    InMemoryDocumentRepository,
-)
+from app.repositories.document import InMemoryDocumentRepository
 from app.repositories.document_chunk import (
     InMemoryDocumentChunkRepository,
 )
@@ -29,8 +25,6 @@ from app.repositories.extracted_document import (
 )
 from app.services.assessment_execution_service import (
     AssessmentExecutionService,
-    AssessmentWorkflowExecutorProtocol,
-    UnavailableAssessmentWorkflowExecutor,
 )
 from app.services.assessment_retrieval_context_service import (
     AssessmentRetrievalContextService,
@@ -51,9 +45,7 @@ from app.services.document_extraction_service import (
 from app.services.document_indexing_service import (
     DocumentIndexingService,
 )
-from app.services.document_pipeline_service import (
-    DocumentPipelineService,
-)
+from app.services.document_pipeline_service import DocumentPipelineService
 from app.services.document_processing_service import (
     DocumentProcessingService,
 )
@@ -63,11 +55,10 @@ from app.services.document_validation_service import (
 )
 from app.services.embedding_service import EmbeddingService
 from app.services.llm_service import LLMService
-from app.storage.document_storage import (
-    InMemoryDocumentStorage,
-)
+from app.storage.document_storage import InMemoryDocumentStorage
 from app.workflows.runtime_factory import (
     AssessmentWorkflowRuntimeFactory,
+    DynamicAssessmentWorkflowExecutor,
 )
 
 
@@ -82,23 +73,8 @@ def get_assessment_repository() -> InMemoryAssessmentRepository:
 def get_assessment_service() -> AssessmentService:
     """Return the shared assessment service."""
 
-    return AssessmentService(repository=get_assessment_repository())
-
-
-@lru_cache
-def get_assessment_workflow_executor() -> AssessmentWorkflowExecutorProtocol:
-    """Return the configured assessment workflow executor."""
-
-    return UnavailableAssessmentWorkflowExecutor()
-
-
-@lru_cache
-def get_assessment_execution_service() -> AssessmentExecutionService:
-    """Return the assessment execution service."""
-
-    return AssessmentExecutionService(
+    return AssessmentService(
         repository=get_assessment_repository(),
-        workflow_executor=get_assessment_workflow_executor(),
     )
 
 
@@ -130,12 +106,13 @@ def get_document_service() -> DocumentService:
     return DocumentService(
         repository=get_document_repository(),
         storage=get_document_storage(),
-        validation_service=(get_document_validation_service()),
+        validation_service=get_document_validation_service(),
     )
 
 
 @lru_cache
-def get_extracted_document_repository() -> InMemoryExtractedDocumentRepository:
+def get_extracted_document_repository(
+) -> InMemoryExtractedDocumentRepository:
     """Return the extracted-document repository."""
 
     return InMemoryExtractedDocumentRepository()
@@ -146,14 +123,8 @@ def get_document_parser_registry() -> DocumentParserRegistry:
     """Return the configured document parser registry."""
 
     registry = DocumentParserRegistry()
-
-    registry.register(
-        PypdfPDFParser(),
-    )
-    registry.register(
-        Utf8TextDocumentParser(),
-    )
-
+    registry.register(PypdfPDFParser())
+    registry.register(Utf8TextDocumentParser())
     return registry
 
 
@@ -168,18 +139,21 @@ def get_document_extraction_service() -> DocumentExtractionService:
 
 @lru_cache
 def get_document_processing_service() -> DocumentProcessingService:
-    """Return the document processing service."""
+    """Return the document extraction-processing service."""
 
     return DocumentProcessingService(
         document_repository=get_document_repository(),
-        extracted_document_repository=(get_extracted_document_repository()),
+        extracted_document_repository=(
+            get_extracted_document_repository()
+        ),
         storage=get_document_storage(),
-        extraction_service=(get_document_extraction_service()),
+        extraction_service=get_document_extraction_service(),
     )
 
 
 @lru_cache
-def get_document_chunk_repository() -> InMemoryDocumentChunkRepository:
+def get_document_chunk_repository(
+) -> InMemoryDocumentChunkRepository:
     """Return the citation-ready chunk repository."""
 
     return InMemoryDocumentChunkRepository()
@@ -198,35 +172,39 @@ def get_document_chunking_service() -> DocumentChunkingService:
 
 
 @lru_cache
-def get_document_chunk_processing_service() -> DocumentChunkProcessingService:
+def get_document_chunk_processing_service(
+) -> DocumentChunkProcessingService:
     """Return the document chunk-processing service."""
 
     return DocumentChunkProcessingService(
         document_repository=get_document_repository(),
-        extracted_document_repository=(get_extracted_document_repository()),
-        chunk_repository=(get_document_chunk_repository()),
+        extracted_document_repository=(
+            get_extracted_document_repository()
+        ),
+        chunk_repository=get_document_chunk_repository(),
         chunking_service=get_document_chunking_service(),
     )
 
 
 @lru_cache
 def get_embedding_service() -> EmbeddingService:
-    """Return the configured local embedding service."""
+    """Return the configured local embedding service.
+
+    The Sentence Transformer is loaded only when this dependency is resolved,
+    not when the FastAPI application module is imported.
+    """
 
     settings = get_settings()
-
     provider = SentenceTransformerEmbeddingProvider(
         model_name=settings.embedding_model,
-        normalize_embeddings=(settings.normalize_embeddings),
+        normalize_embeddings=settings.normalize_embeddings,
     )
-
-    return EmbeddingService(
-        provider=provider,
-    )
+    return EmbeddingService(provider=provider)
 
 
 @lru_cache
-def get_assessment_vector_index_registry() -> InMemoryAssessmentVectorIndexRegistry:
+def get_assessment_vector_index_registry(
+) -> InMemoryAssessmentVectorIndexRegistry:
     """Return the assessment-isolated vector-index registry."""
 
     return InMemoryAssessmentVectorIndexRegistry(
@@ -244,7 +222,7 @@ def get_document_indexing_service() -> DocumentIndexingService:
     return DocumentIndexingService(
         document_repository=get_document_repository(),
         chunk_repository=get_document_chunk_repository(),
-        index_registry=(get_assessment_vector_index_registry()),
+        index_registry=get_assessment_vector_index_registry(),
         embedding_service=get_embedding_service(),
     )
 
@@ -254,43 +232,47 @@ def get_document_pipeline_service() -> DocumentPipelineService:
     """Return the extraction, chunking, and indexing pipeline."""
 
     return DocumentPipelineService(
-        extraction_service=(get_document_processing_service()),
-        chunk_processing_service=(get_document_chunk_processing_service()),
+        extraction_service=get_document_processing_service(),
+        chunk_processing_service=(
+            get_document_chunk_processing_service()
+        ),
         indexing_service=get_document_indexing_service(),
     )
 
 
 @lru_cache
-def get_assessment_retrieval_context_service() -> AssessmentRetrievalContextService:
+def get_assessment_retrieval_context_service(
+) -> AssessmentRetrievalContextService:
     """Return the assessment-scoped retrieval context factory."""
 
     return AssessmentRetrievalContextService(
         embedding_service=get_embedding_service(),
-        index_registry=(get_assessment_vector_index_registry()),
+        index_registry=get_assessment_vector_index_registry(),
         candidate_limit=20,
         final_limit=5,
     )
 
 
 @lru_cache
-def get_assessment_tool_context_service() -> AssessmentToolContextService:
+def get_assessment_tool_context_service(
+) -> AssessmentToolContextService:
     """Return the bounded specialist-tool context factory."""
 
     return AssessmentToolContextService(
-        retrieval_context_service=(get_assessment_retrieval_context_service())
+        retrieval_context_service=(
+            get_assessment_retrieval_context_service()
+        ),
     )
 
 
 def create_assessment_llm_service() -> LLMService:
-    """Create a fresh bounded LLM service for one workflow."""
+    """Create a fresh bounded LLM service for one workflow execution."""
 
     settings = get_settings()
-
     provider = GeminiProvider(
         api_key=settings.gemini_api_key,
         model_name=settings.llm_model,
     )
-
     return LLMService(
         provider=provider,
         max_calls_per_assessment=3,
@@ -298,10 +280,31 @@ def create_assessment_llm_service() -> LLMService:
 
 
 @lru_cache
-def get_assessment_runtime_factory() -> AssessmentWorkflowRuntimeFactory:
+def get_assessment_runtime_factory(
+) -> AssessmentWorkflowRuntimeFactory:
     """Return the assessment-specific workflow runtime factory."""
 
     return AssessmentWorkflowRuntimeFactory(
-        tool_context_service=(get_assessment_tool_context_service()),
+        tool_context_service=get_assessment_tool_context_service(),
         llm_service_factory=create_assessment_llm_service,
+    )
+
+
+@lru_cache
+def get_assessment_workflow_executor(
+) -> DynamicAssessmentWorkflowExecutor:
+    """Return the dynamic assessment-scoped workflow executor."""
+
+    return DynamicAssessmentWorkflowExecutor(
+        runtime_factory=get_assessment_runtime_factory(),
+    )
+
+
+@lru_cache
+def get_assessment_execution_service() -> AssessmentExecutionService:
+    """Return the assessment execution service."""
+
+    return AssessmentExecutionService(
+        repository=get_assessment_repository(),
+        workflow_executor=get_assessment_workflow_executor(),
     )

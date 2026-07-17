@@ -188,7 +188,7 @@ class AssessmentExecutionService:
             risk_report_input=risk_input,
             maximum_steps=request.maximum_workflow_steps,
             maximum_retries=request.maximum_retries,
-            human_review_required=True,
+            human_review_required=False,
         )
 
     async def _mark_running(
