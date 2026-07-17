@@ -4,7 +4,9 @@ from app.tools.document_tools import (
     ExtractDocumentTool,
     GetDocumentPageTool,
 )
+from app.tools.indexing_tools import IndexDocumentTool
 from app.tools.registry import ToolRegistry
+from app.tools.retrieval_tools import SearchEvidenceTool
 from app.tools.schemas import (
     ToolDefinition,
     ToolExecutionResult,
@@ -16,6 +18,8 @@ __all__ = [
     "ChunkDocumentTool",
     "ExtractDocumentTool",
     "GetDocumentPageTool",
+    "IndexDocumentTool",
+    "SearchEvidenceTool",
     "ToolDefinition",
     "ToolExecutionResult",
     "ToolRegistry",
