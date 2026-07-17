@@ -23,10 +23,13 @@ class SentenceTransformerEmbeddingProvider(
         normalized_model_name = model_name.strip()
 
         if not normalized_model_name:
-            raise EmbeddingConfigurationError("Embedding model name is required.")
+            raise EmbeddingConfigurationError(
+                "Embedding model name is required."
+            )
 
         self._model_name = normalized_model_name
         self._normalize_embeddings = normalize_embeddings
+
         self._model = model or self._load_model(
             normalized_model_name,
         )
@@ -60,11 +63,19 @@ class SentenceTransformerEmbeddingProvider(
         if not texts:
             return []
 
-        normalized_texts = [self._validate_text(text) for text in texts]
+        normalized_texts = [
+            self._validate_text(text)
+            for text in texts
+        ]
 
-        vectors = self._encode(normalized_texts)
+        vectors = self._encode(
+            normalized_texts,
+        )
 
-        return [self._to_embedding_vector(vector) for vector in vectors]
+        return [
+            self._to_embedding_vector(vector)
+            for vector in vectors
+        ]
 
     def embed_query(
         self,
@@ -72,21 +83,29 @@ class SentenceTransformerEmbeddingProvider(
     ) -> EmbeddingVector:
         """Generate an embedding for a search query."""
 
-        normalized_text = self._validate_text(text)
-        vectors = self._encode([normalized_text])
+        normalized_text = self._validate_text(
+            text,
+        )
+
+        vectors = self._encode(
+            [normalized_text],
+        )
 
         if len(vectors) != 1:
             raise EmbeddingProviderError(
-                "Embedding model returned an unexpected number of query vectors."
+                "Embedding model returned an unexpected "
+                "number of query vectors."
             )
 
-        return self._to_embedding_vector(vectors[0])
+        return self._to_embedding_vector(
+            vectors[0],
+        )
 
     @staticmethod
     def _load_model(
         model_name: str,
     ) -> Any:
-        """Load a Sentence Transformer model."""
+        """Load a Sentence Transformer model on the CPU."""
 
         try:
             from sentence_transformers import (
@@ -106,12 +125,27 @@ class SentenceTransformerEmbeddingProvider(
         """Read and validate the model embedding dimension."""
 
         try:
-            dimension = self._model.get_sentence_embedding_dimension()
+            if hasattr(
+                self._model,
+                "get_embedding_dimension",
+            ):
+                dimension = (
+                    self._model.get_embedding_dimension()
+                )
+            else:
+                dimension = (
+                    self._model
+                    .get_sentence_embedding_dimension()
+                )
         except Exception as error:
-            raise EmbeddingProviderError("Unable to determine the embedding dimension.") from error
+            raise EmbeddingProviderError(
+                "Unable to determine the embedding dimension."
+            ) from error
 
         if not isinstance(dimension, int) or dimension < 1:
-            raise EmbeddingDimensionError("Embedding model returned an invalid dimension.")
+            raise EmbeddingDimensionError(
+                "Embedding model returned an invalid dimension."
+            )
 
         return dimension
 
@@ -125,13 +159,23 @@ class SentenceTransformerEmbeddingProvider(
             vectors = self._model.encode(
                 texts,
                 convert_to_numpy=True,
-                normalize_embeddings=(self._normalize_embeddings),
+                normalize_embeddings=(
+                    self._normalize_embeddings
+                ),
                 show_progress_bar=False,
             )
         except Exception as error:
-            raise EmbeddingProviderError("Sentence Transformer encoding failed.") from error
+            raise EmbeddingProviderError(
+                "Sentence Transformer encoding failed."
+            ) from error
 
-        return list(vectors)
+        try:
+            return list(vectors)
+        except TypeError as error:
+            raise EmbeddingProviderError(
+                "Embedding model returned an invalid "
+                "vector collection."
+            ) from error
 
     def _to_embedding_vector(
         self,
@@ -140,9 +184,23 @@ class SentenceTransformerEmbeddingProvider(
         """Convert a model vector into the shared schema."""
 
         try:
-            values = [float(value) for value in vector.tolist()]
-        except (AttributeError, TypeError, ValueError) as error:
-            raise EmbeddingProviderError("Embedding model returned an invalid vector.") from error
+            if hasattr(vector, "tolist"):
+                raw_values = vector.tolist()
+            else:
+                raw_values = list(vector)
+
+            values = [
+                float(value)
+                for value in raw_values
+            ]
+        except (
+            AttributeError,
+            TypeError,
+            ValueError,
+        ) as error:
+            raise EmbeddingProviderError(
+                "Embedding model returned an invalid vector."
+            ) from error
 
         embedding = EmbeddingVector(
             values=values,
@@ -167,6 +225,8 @@ class SentenceTransformerEmbeddingProvider(
         normalized_text = text.strip()
 
         if not normalized_text:
-            raise ValueError("Text to embed cannot be empty.")
+            raise ValueError(
+                "Text to embed cannot be empty."
+            )
 
         return normalized_text

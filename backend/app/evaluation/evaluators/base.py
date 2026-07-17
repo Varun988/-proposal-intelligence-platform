@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 from pydantic import BaseModel
 
@@ -11,9 +11,8 @@ EvaluationTarget = TypeVar(
 )
 
 
-class BaseEvaluator(
+class BaseEvaluator[EvaluationTarget: BaseModel](
     ABC,
-    Generic[EvaluationTarget],
 ):
     """Contract implemented by deterministic agent evaluators."""
 

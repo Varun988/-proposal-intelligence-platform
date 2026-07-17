@@ -3,12 +3,6 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from app.core.exceptions import DocumentNotFoundError
-from app.services.document_chunking_service import (
-    DocumentChunkingService,
-)
-from app.services.document_extraction_service import (
-    DocumentExtractionService,
-)
 from app.schemas.chunk import (
     ChunkCitation,
     ChunkingResult,
@@ -16,6 +10,12 @@ from app.schemas.chunk import (
 from app.schemas.document import (
     DocumentPage,
     ExtractedDocument,
+)
+from app.services.document_chunking_service import (
+    DocumentChunkingService,
+)
+from app.services.document_extraction_service import (
+    DocumentExtractionService,
 )
 from app.tools.base import BaseTool
 

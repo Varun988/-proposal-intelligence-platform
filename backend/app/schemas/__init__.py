@@ -33,11 +33,11 @@ from app.schemas.retrieval import (
 __all__ = [
     "ChunkCitation",
     "ChunkingResult",
+    "DeduplicationResult",
     "DocumentChunk",
     "DocumentMetadata",
     "DocumentPage",
     "DocumentType",
-    "DeduplicationResult",
     "EmbeddedChunk",
     "EmbeddingBatchResult",
     "EmbeddingVector",

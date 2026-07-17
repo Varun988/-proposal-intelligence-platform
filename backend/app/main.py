@@ -24,10 +24,7 @@ def create_app() -> FastAPI:
         title=settings.app_name,
         version=settings.app_version,
         debug=settings.debug,
-        description=(
-            "Backend API for AI-assisted proposal analysis "
-            "and vendor risk evaluation."
-        ),
+        description=("Backend API for AI-assisted proposal analysis and vendor risk evaluation."),
     )
 
     application.include_router(

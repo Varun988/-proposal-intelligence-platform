@@ -1,7 +1,3 @@
-from app.evaluation.proposal_analysis import (
-    create_proposal_analysis_evaluation_runner,
-)
-
 from app.agents.proposal_analysis.schemas import (
     AgentToolCallTrace,
     EvidenceReference,
@@ -12,6 +8,9 @@ from app.agents.proposal_analysis.schemas import (
     ProposalAnalysisResult,
     ProposalFinding,
     ProposalSummary,
+)
+from app.evaluation.proposal_analysis import (
+    create_proposal_analysis_evaluation_runner,
 )
 
 

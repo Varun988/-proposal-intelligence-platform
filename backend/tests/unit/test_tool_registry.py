@@ -1,11 +1,11 @@
 import pytest
-from app.tools.registry import ToolRegistry
 
 from app.core.exceptions import (
     ToolNotFoundError,
     ToolPermissionError,
     ToolRegistrationError,
 )
+from app.tools.registry import ToolRegistry
 from tests.tool_fakes import EchoTool
 
 

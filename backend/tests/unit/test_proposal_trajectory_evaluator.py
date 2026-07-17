@@ -1,5 +1,4 @@
 from copy import deepcopy
-import pytest
 
 from app.agents.proposal_analysis.schemas import (
     AgentToolCallTrace,

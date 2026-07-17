@@ -4,7 +4,6 @@ import sys
 from datetime import UTC, datetime
 from typing import Any
 
-
 STANDARD_LOG_RECORD_FIELDS = {
     "args",
     "asctime",
@@ -54,8 +53,7 @@ class JsonLogFormatter(logging.Formatter):
         extra_fields = {
             key: value
             for key, value in record.__dict__.items()
-            if key not in STANDARD_LOG_RECORD_FIELDS
-            and not key.startswith("_")
+            if key not in STANDARD_LOG_RECORD_FIELDS and not key.startswith("_")
         }
 
         if extra_fields:
@@ -97,10 +95,7 @@ def configure_logging(
         )
     else:
         handler.setFormatter(
-            logging.Formatter(
-                "%(asctime)s | %(levelname)s | "
-                "%(name)s | %(message)s"
-            )
+            logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
         )
 
     root_logger = logging.getLogger()

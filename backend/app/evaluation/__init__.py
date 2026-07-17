@@ -4,6 +4,9 @@ from app.evaluation.evaluators import (
     ProposalTrajectoryEvaluator,
 )
 from app.evaluation.gates import evaluate_gate
+from app.evaluation.proposal_analysis import (
+    create_proposal_analysis_evaluation_runner,
+)
 from app.evaluation.runner import AgentEvaluationRunner
 from app.evaluation.schemas import (
     AgentEvaluationReport,
@@ -14,15 +17,11 @@ from app.evaluation.schemas import (
     EvaluationSeverity,
     EvaluationStatus,
 )
-from app.evaluation.proposal_analysis import (
-    create_proposal_analysis_evaluation_runner,
-)
 
 __all__ = [
     "AgentEvaluationReport",
     "AgentEvaluationRunner",
     "BaseEvaluator",
-    "create_proposal_analysis_evaluation_runner",
     "EvaluationFinding",
     "EvaluationGate",
     "EvaluationGateResult",
@@ -31,5 +30,6 @@ __all__ = [
     "EvaluationStatus",
     "ProposalCitationEvaluator",
     "ProposalTrajectoryEvaluator",
+    "create_proposal_analysis_evaluation_runner",
     "evaluate_gate",
 ]

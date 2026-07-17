@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     debug: bool = False
     log_level: str = "INFO"
+    log_json_format: bool = True
 
     api_v1_prefix: str = "/api/v1"
 
