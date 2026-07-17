@@ -31,7 +31,19 @@ from app.services.document_extraction_service import (
 from app.services.document_processing_service import (
     DocumentProcessingService,
 )
-
+from app.rag.chunking import PageAwareDocumentChunker
+from app.repositories.document_chunk import (
+    InMemoryDocumentChunkRepository,
+)
+from app.services.document_chunk_processing_service import (
+    DocumentChunkProcessingService,
+)
+from app.services.document_chunking_service import (
+    DocumentChunkingService,
+)
+from app.services.document_pipeline_service import (
+    DocumentPipelineService,
+)
 
 @lru_cache
 def get_assessment_repository() -> InMemoryAssessmentRepository:
@@ -148,5 +160,57 @@ def get_document_processing_service(
         storage=get_document_storage(),
         extraction_service=(
             get_document_extraction_service()
+        ),
+    )
+
+@lru_cache
+def get_document_chunk_repository(
+) -> InMemoryDocumentChunkRepository:
+    """Return the citation-ready chunk repository."""
+
+    return InMemoryDocumentChunkRepository()
+
+
+@lru_cache
+def get_document_chunking_service(
+) -> DocumentChunkingService:
+    """Return the configured page-aware chunking service."""
+
+    return DocumentChunkingService(
+        chunker=PageAwareDocumentChunker(
+            max_characters=1_500,
+            overlap_characters=200,
+        ),
+    )
+
+
+@lru_cache
+def get_document_chunk_processing_service(
+) -> DocumentChunkProcessingService:
+    """Return the document chunk-processing service."""
+
+    return DocumentChunkProcessingService(
+        document_repository=get_document_repository(),
+        extracted_document_repository=(
+            get_extracted_document_repository()
+        ),
+        chunk_repository=(
+            get_document_chunk_repository()
+        ),
+        chunking_service=get_document_chunking_service(),
+    )
+
+
+@lru_cache
+def get_document_pipeline_service(
+) -> DocumentPipelineService:
+    """Return the extraction and chunking pipeline."""
+
+    return DocumentPipelineService(
+        extraction_service=(
+            get_document_processing_service()
+        ),
+        chunk_processing_service=(
+            get_document_chunk_processing_service()
         ),
     )

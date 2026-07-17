@@ -13,7 +13,7 @@ from fastapi import (
 from pydantic import ValidationError
 
 from app.api.dependencies import (
-    get_document_processing_service,
+    get_document_pipeline_service,
     get_document_service,
 )
 from app.core.exceptions import (
@@ -33,13 +33,13 @@ from app.services.document_service import DocumentService
 from app.services.document_validation_service import (
     MAXIMUM_DOCUMENT_SIZE_BYTES,
 )
-from app.services.document_processing_service import (
-    DocumentProcessingService,
+from app.services.document_pipeline_service import (
+    DocumentPipelineService,
 )
 
-DocumentProcessingServiceDependency = Annotated[
-    DocumentProcessingService,
-    Depends(get_document_processing_service),
+DocumentPipelineServiceDependency = Annotated[
+    DocumentPipelineService,
+    Depends(get_document_pipeline_service),
 ]
 
 router = APIRouter(
@@ -173,8 +173,49 @@ async def upload_document(
 async def process_document(
     document_id: str,
     background_tasks: BackgroundTasks,
+    pipeline_service: DocumentPipelineServiceDependency,
+) -> DocumentProcessResponse:
+    """Queue extraction and chunking for one document."""
+
+    try:
+        response = await pipeline_service.request_processing(
+            document_id,
+        )
+    except DocumentNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error_code": "document_not_found",
+                "message": str(error),
+                "document_id": document_id,
+                "details": {},
+            },
+        ) from error
+    except DocumentConflictError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error_code": (
+                    "document_processing_conflict"
+                ),
+                "message": str(error),
+                "document_id": document_id,
+                "details": {},
+            },
+        ) from error
+
+    background_tasks.add_task(
+        pipeline_service.process_document,
+        document_id,
+    )
+
+    return response
+
+async def process_document(
+    document_id: str,
+    background_tasks: BackgroundTasks,
     processing_service: (
-        DocumentProcessingServiceDependency
+        DocumentPipelineServiceDependency
     ),
 ) -> DocumentProcessResponse:
     """Queue one stored document for extraction."""

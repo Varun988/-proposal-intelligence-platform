@@ -2,8 +2,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import (
+    get_document_chunk_processing_service,
+    get_document_chunk_repository,
+    get_document_chunking_service,
     get_document_extraction_service,
     get_document_parser_registry,
+    get_document_pipeline_service,
     get_document_processing_service,
     get_document_repository,
     get_document_service,
@@ -14,6 +18,10 @@ from app.api.dependencies import (
 from app.main import app
 
 DOCUMENT_DEPENDENCIES = [
+    get_document_pipeline_service,
+    get_document_chunk_processing_service,
+    get_document_chunking_service,
+    get_document_chunk_repository,
     get_document_processing_service,
     get_document_extraction_service,
     get_document_parser_registry,
@@ -91,7 +99,7 @@ def test_process_document_returns_accepted(
     assert response_data["lifecycle_status"] == "extraction_pending"
 
 
-def test_background_processing_persists_extraction(
+def test_background_processing_persists_chunks(
     client: TestClient,
 ) -> None:
     document_id = upload_text_document(client)
@@ -110,7 +118,8 @@ def test_background_processing_persists_extraction(
 
     status_data = status_response.json()
 
-    assert status_data["lifecycle_status"] == "extracted"
+    assert status_data["lifecycle_status"] == "chunked"
+    assert status_data["chunk_count"] == 1
     assert status_data["page_count"] == 1
     assert status_data["extracted_character_count"] == 27
     assert status_data["error_message"] is None
