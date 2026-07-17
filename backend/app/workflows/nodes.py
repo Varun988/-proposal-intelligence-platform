@@ -19,6 +19,10 @@ from app.workflows.state import (
     WorkflowRoute,
     WorkflowStatus,
 )
+from app.agents.vendor_research.schemas import (
+    VendorResearchExecution,
+    VendorResearchInput,
+)
 
 
 class OrchestratorAgentProtocol(Protocol):
@@ -41,6 +45,16 @@ class ProposalAnalysisAgentProtocol(Protocol):
         """Run proposal analysis."""
 
 
+class VendorResearchAgentProtocol(Protocol):
+    """Minimum Vendor Research Agent interface required by workflow."""
+
+    async def research(
+        self,
+        research_input: VendorResearchInput,
+    ) -> VendorResearchExecution:
+        """Run approved-source vendor research."""
+
+
 class AssessmentWorkflowNodes:
     """Nodes used by the controlled assessment workflow."""
 
@@ -48,11 +62,15 @@ class AssessmentWorkflowNodes:
         self,
         orchestrator_agent: OrchestratorAgentProtocol,
         proposal_analysis_agent: ProposalAnalysisAgentProtocol,
-        evaluation_runner: AgentEvaluationRunner,
+        proposal_evaluation_runner: AgentEvaluationRunner,
+        vendor_research_agent: (VendorResearchAgentProtocol | None) = None,
+        vendor_evaluation_runner: (AgentEvaluationRunner | None) = None,
     ) -> None:
         self._orchestrator_agent = orchestrator_agent
         self._proposal_analysis_agent = proposal_analysis_agent
-        self._evaluation_runner = evaluation_runner
+        self._proposal_evaluation_runner = proposal_evaluation_runner
+        self._vendor_research_agent = vendor_research_agent
+        self._vendor_evaluation_runner = vendor_evaluation_runner
 
     def initialize_workflow(
         self,
@@ -267,7 +285,7 @@ class AssessmentWorkflowNodes:
         )
 
         try:
-            report = self._evaluation_runner.run(
+            report = self._proposal_evaluation_runner.run(
                 target=execution,
                 assessment_id=state.assessment_id,
                 agent_instruction_version=execution.instruction_version,
@@ -392,10 +410,18 @@ class AssessmentWorkflowNodes:
         return "evaluation"
 
     @staticmethod
-    def route_after_evaluation(state: AssessmentWorkflowState) -> str:
-        """Choose the next route from evaluation release gates."""
+    def route_after_evaluation(
+        state: AssessmentWorkflowState,
+    ) -> str:
+        """Route after Proposal Analysis evaluation."""
 
-        return "next_agent" if state.proposal_analysis_passed else "human_review"
+        if not state.proposal_analysis_passed:
+            return "human_review"
+
+        if state.vendor_research_planned:
+            return "vendor_research"
+
+        return "next_agent"
 
     @staticmethod
     def _validate_orchestration_execution(
@@ -469,3 +495,248 @@ class AssessmentWorkflowNodes:
             "errors": [*state.errors, reason],
             "events": [*state.events, event],
         }
+
+    async def run_vendor_research(
+        self,
+        state: AssessmentWorkflowState,
+    ) -> dict[str, object]:
+        """Execute the Vendor Research Agent."""
+
+        if state.step_limit_reached:
+            return self._create_step_limit_failure(
+                state=state,
+                node_name="run_vendor_research",
+            )
+
+        if self._vendor_research_agent is None:
+            return self._create_human_review_update(
+                state=state,
+                reason=("Vendor Research is planned, but no Vendor Research Agent is configured."),
+                event_type=WorkflowEventType.WORKFLOW_FAILED,
+            )
+
+        if state.vendor_research_input is None:
+            return self._create_human_review_update(
+                state=state,
+                reason=("Vendor Research is planned, but no Vendor Research input is available."),
+                event_type=WorkflowEventType.WORKFLOW_FAILED,
+            )
+
+        started_event = WorkflowEvent(
+            event_type=WorkflowEventType.AGENT_STARTED,
+            status=WorkflowStatus.VENDOR_RESEARCH_RUNNING,
+            message="Vendor Research Agent execution started.",
+            agent_name="vendor-research",
+        )
+
+        try:
+            execution = await self._vendor_research_agent.research(
+                state.vendor_research_input,
+            )
+        except Exception as error:
+            error_message = f"Vendor Research Agent execution failed: {type(error).__name__}."
+
+            failure_event = WorkflowEvent(
+                event_type=WorkflowEventType.WORKFLOW_FAILED,
+                status=WorkflowStatus.HUMAN_REVIEW_REQUIRED,
+                message=error_message,
+                agent_name="vendor-research",
+                metadata={
+                    "error_type": type(error).__name__,
+                },
+            )
+
+            return {
+                "status": WorkflowStatus.HUMAN_REVIEW_REQUIRED,
+                "next_route": (WorkflowRoute.REQUIRE_HUMAN_REVIEW),
+                "human_review_required": True,
+                "human_review_reason": error_message,
+                "current_step": state.current_step + 1,
+                "errors": [
+                    *state.errors,
+                    error_message,
+                ],
+                "agent_execution_records": [
+                    *state.agent_execution_records,
+                    AgentExecutionRecord(
+                        agent_name="vendor-research",
+                        succeeded=False,
+                        tool_call_count=0,
+                        execution_time_ms=0.0,
+                        instruction_version="unknown",
+                        error_message=error_message,
+                    ),
+                ],
+                "events": [
+                    *state.events,
+                    started_event,
+                    failure_event,
+                ],
+            }
+
+        completed_event = WorkflowEvent(
+            event_type=WorkflowEventType.AGENT_COMPLETED,
+            status=WorkflowStatus.VENDOR_RESEARCH_COMPLETED,
+            message="Vendor Research Agent execution completed.",
+            agent_name="vendor-research",
+            metadata={
+                "tool_call_count": execution.tool_call_count,
+                "evidence_count": len(execution.retrieved_evidence),
+            },
+        )
+
+        return {
+            "status": WorkflowStatus.VENDOR_EVALUATION_PENDING,
+            "next_route": WorkflowRoute.RUN_VENDOR_EVALUATION,
+            "vendor_research_execution": execution,
+            "current_step": state.current_step + 1,
+            "agent_execution_records": [
+                *state.agent_execution_records,
+                AgentExecutionRecord(
+                    agent_name="vendor-research",
+                    succeeded=True,
+                    tool_call_count=execution.tool_call_count,
+                    execution_time_ms=(execution.total_execution_time_ms),
+                    instruction_version=(execution.instruction_version),
+                ),
+            ],
+            "completed_agents": [
+                *state.completed_agents,
+                "vendor-research",
+            ],
+            "events": [
+                *state.events,
+                started_event,
+                completed_event,
+            ],
+        }
+
+    def evaluate_vendor_research(
+        self,
+        state: AssessmentWorkflowState,
+    ) -> dict[str, object]:
+        """Evaluate the Vendor Research Agent execution."""
+
+        if state.step_limit_reached:
+            return self._create_step_limit_failure(
+                state=state,
+                node_name="evaluate_vendor_research",
+            )
+
+        execution = state.vendor_research_execution
+
+        if execution is None:
+            return self._create_human_review_update(
+                state=state,
+                reason=(
+                    "Vendor Research evaluation cannot run because "
+                    "the agent execution is unavailable."
+                ),
+                event_type=WorkflowEventType.WORKFLOW_FAILED,
+            )
+
+        if self._vendor_evaluation_runner is None:
+            return self._create_human_review_update(
+                state=state,
+                reason=(
+                    "Vendor Research execution is available, but "
+                    "no evaluation runner is configured."
+                ),
+                event_type=WorkflowEventType.WORKFLOW_FAILED,
+            )
+
+        started_event = WorkflowEvent(
+            event_type=WorkflowEventType.EVALUATION_STARTED,
+            status=WorkflowStatus.VENDOR_EVALUATION_RUNNING,
+            message="Vendor Research evaluation started.",
+            agent_name="vendor-research",
+        )
+
+        try:
+            report = self._vendor_evaluation_runner.run(
+                target=execution,
+                assessment_id=state.assessment_id,
+                agent_instruction_version=(execution.instruction_version),
+            )
+        except Exception as error:
+            reason = f"Vendor Research evaluation failed: {type(error).__name__}."
+
+            update = self._create_human_review_update(
+                state=state,
+                reason=reason,
+                event_type=WorkflowEventType.WORKFLOW_FAILED,
+            )
+
+            update["events"] = [
+                *state.events,
+                started_event,
+                *update["events"][len(state.events) :],
+            ]
+
+            return update
+
+        completed_event = WorkflowEvent(
+            event_type=WorkflowEventType.EVALUATION_COMPLETED,
+            status=WorkflowStatus.VENDOR_EVALUATION_COMPLETED,
+            message="Vendor Research evaluation completed.",
+            agent_name="vendor-research",
+            metadata={
+                "evaluation_id": report.evaluation_id,
+                "overall_score": report.overall_score,
+                "release_approved": report.release_approved,
+            },
+        )
+
+        next_route = (
+            WorkflowRoute.CONTINUE_TO_NEXT_AGENT
+            if report.release_approved
+            else WorkflowRoute.REQUIRE_HUMAN_REVIEW
+        )
+
+        return {
+            "status": WorkflowStatus.VENDOR_EVALUATION_COMPLETED,
+            "next_route": next_route,
+            "vendor_research_evaluation": report,
+            "current_step": state.current_step + 1,
+            "evaluation_records": [
+                *state.evaluation_records,
+                EvaluationRecord(
+                    agent_name="vendor-research",
+                    evaluation_id=report.evaluation_id,
+                    overall_score=report.overall_score,
+                    release_approved=report.release_approved,
+                    blocking_gate_failure_count=(report.blocking_gate_failure_count),
+                ),
+            ],
+            "events": [
+                *state.events,
+                started_event,
+                completed_event,
+            ],
+        }
+
+    @staticmethod
+    def route_after_vendor_research(
+        state: AssessmentWorkflowState,
+    ) -> str:
+        """Route after Vendor Research execution."""
+
+        if (
+            state.vendor_research_execution is None
+            or state.human_review_required
+            or state.next_route is WorkflowRoute.REQUIRE_HUMAN_REVIEW
+        ):
+            return "human_review"
+
+        return "vendor_evaluation"
+
+    @staticmethod
+    def route_after_vendor_evaluation(
+        state: AssessmentWorkflowState,
+    ) -> str:
+        """Route from Vendor Research release gates."""
+
+        if state.vendor_research_passed:
+            return "next_agent"
+
+        return "human_review"

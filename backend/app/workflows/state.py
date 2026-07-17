@@ -11,6 +11,10 @@ from app.agents.proposal_analysis.schemas import (
     ProposalAnalysisExecution,
     ProposalAnalysisInput,
 )
+from app.agents.vendor_research.schemas import (
+    VendorResearchExecution,
+    VendorResearchInput,
+)
 from app.evaluation.schemas import AgentEvaluationReport
 
 
@@ -32,6 +36,12 @@ class WorkflowStatus(StrEnum):
     READY_FOR_NEXT_AGENT = "ready_for_next_agent"
     COMPLETED = "completed"
     FAILED = "failed"
+    VENDOR_RESEARCH_PENDING = "vendor_research_pending"
+    VENDOR_RESEARCH_RUNNING = "vendor_research_running"
+    VENDOR_RESEARCH_COMPLETED = "vendor_research_completed"
+    VENDOR_EVALUATION_PENDING = "vendor_evaluation_pending"
+    VENDOR_EVALUATION_RUNNING = "vendor_evaluation_running"
+    VENDOR_EVALUATION_COMPLETED = "vendor_evaluation_completed"
 
 
 class WorkflowRoute(StrEnum):
@@ -44,6 +54,8 @@ class WorkflowRoute(StrEnum):
     CONTINUE_TO_NEXT_AGENT = "continue_to_next_agent"
     COMPLETE = "complete"
     FAIL = "fail"
+    RUN_VENDOR_RESEARCH = "run_vendor_research"
+    RUN_VENDOR_EVALUATION = "run_vendor_evaluation"
 
 
 class WorkflowEventType(StrEnum):
@@ -122,6 +134,10 @@ class AssessmentWorkflowState(BaseModel):
     human_review_required: bool = False
     human_review_reason: str | None = None
 
+    vendor_research_input: VendorResearchInput | None = None
+    vendor_research_execution: VendorResearchExecution | None = None
+    vendor_research_evaluation: AgentEvaluationReport | None = None
+
     completed_agents: list[str] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
 
@@ -163,6 +179,21 @@ class AssessmentWorkflowState(BaseModel):
                 "Proposal analysis RFP document ID must match the workflow RFP document ID."
             )
 
+        if self.vendor_research_input is not None:
+            if self.vendor_research_input.assessment_id != self.assessment_id:
+                raise ValueError(
+                    "Vendor research assessment ID must match the workflow assessment ID."
+                )
+
+            if (
+                self.vendor_research_input.proposal_document_id is not None
+                and self.vendor_research_input.proposal_document_id != self.proposal_document_id
+            ):
+                raise ValueError(
+                    "Vendor research proposal document ID must "
+                    "match the workflow proposal document ID."
+                )
+
         return self
 
     @property
@@ -190,3 +221,23 @@ class AssessmentWorkflowState(BaseModel):
         """Return whether a validated orchestration plan exists."""
 
         return self.orchestrator_execution is not None
+
+    @property
+    def vendor_research_planned(self) -> bool:
+        """Return whether the Orchestrator planned vendor research."""
+
+        if self.orchestrator_execution is None:
+            return False
+
+        return any(
+            task.agent_name.value == "vendor-research"
+            for task in self.orchestrator_execution.plan.tasks
+        )
+
+    @property
+    def vendor_research_passed(self) -> bool:
+        """Return whether Vendor Research passed evaluation."""
+
+        return bool(
+            self.vendor_research_evaluation and self.vendor_research_evaluation.release_approved
+        )

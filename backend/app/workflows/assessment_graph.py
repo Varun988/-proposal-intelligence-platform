@@ -7,6 +7,7 @@ from app.workflows.nodes import (
     AssessmentWorkflowNodes,
     OrchestratorAgentProtocol,
     ProposalAnalysisAgentProtocol,
+    VendorResearchAgentProtocol,
 )
 from app.workflows.state import AssessmentWorkflowState
 
@@ -14,14 +15,18 @@ from app.workflows.state import AssessmentWorkflowState
 def create_assessment_graph(
     orchestrator_agent: OrchestratorAgentProtocol,
     proposal_analysis_agent: ProposalAnalysisAgentProtocol,
-    evaluation_runner: AgentEvaluationRunner,
+    proposal_evaluation_runner: AgentEvaluationRunner,
+    vendor_research_agent: (VendorResearchAgentProtocol | None) = None,
+    vendor_evaluation_runner: (AgentEvaluationRunner | None) = None,
 ) -> Any:
     """Create and compile the controlled assessment workflow."""
 
     nodes = AssessmentWorkflowNodes(
         orchestrator_agent=orchestrator_agent,
         proposal_analysis_agent=proposal_analysis_agent,
-        evaluation_runner=evaluation_runner,
+        proposal_evaluation_runner=(proposal_evaluation_runner),
+        vendor_research_agent=vendor_research_agent,
+        vendor_evaluation_runner=vendor_evaluation_runner,
     )
 
     graph = StateGraph(AssessmentWorkflowState)
@@ -32,6 +37,14 @@ def create_assessment_graph(
     graph.add_node("evaluate_proposal_analysis", nodes.evaluate_proposal_analysis)
     graph.add_node("request_human_review", nodes.request_human_review)
     graph.add_node("mark_ready_for_next_agent", nodes.mark_ready_for_next_agent)
+    graph.add_node(
+        "run_vendor_research",
+        nodes.run_vendor_research,
+    )
+    graph.add_node(
+        "evaluate_vendor_research",
+        nodes.evaluate_vendor_research,
+    )
 
     graph.add_edge(START, "initialize_workflow")
     graph.add_edge("initialize_workflow", "create_orchestration_plan")
@@ -57,6 +70,25 @@ def create_assessment_graph(
     graph.add_conditional_edges(
         "evaluate_proposal_analysis",
         nodes.route_after_evaluation,
+        {
+            "vendor_research": "run_vendor_research",
+            "next_agent": "mark_ready_for_next_agent",
+            "human_review": "request_human_review",
+        },
+    )
+
+    graph.add_conditional_edges(
+        "run_vendor_research",
+        nodes.route_after_vendor_research,
+        {
+            "vendor_evaluation": "evaluate_vendor_research",
+            "human_review": "request_human_review",
+        },
+    )
+
+    graph.add_conditional_edges(
+        "evaluate_vendor_research",
+        nodes.route_after_vendor_evaluation,
         {
             "next_agent": "mark_ready_for_next_agent",
             "human_review": "request_human_review",

@@ -162,6 +162,10 @@ def test_workflow_state_rejects_assessment_id_mismatch() -> None:
         AssessmentWorkflowState(
             assessment_id="assessment-001",
             proposal_document_id="proposal-001",
+            orchestrator_input=OrchestratorInput(
+                assessment_id="assessment-001",
+                proposal_document_id="proposal-001",
+            ),
             proposal_analysis_input=ProposalAnalysisInput(
                 assessment_id="wrong-assessment",
                 proposal_document_id="proposal-001",
@@ -177,6 +181,10 @@ def test_workflow_state_rejects_document_id_mismatch() -> None:
         AssessmentWorkflowState(
             assessment_id="assessment-001",
             proposal_document_id="proposal-001",
+            orchestrator_input=OrchestratorInput(
+                assessment_id="assessment-001",
+                proposal_document_id="proposal-001",
+            ),
             proposal_analysis_input=ProposalAnalysisInput(
                 assessment_id="assessment-001",
                 proposal_document_id="wrong-proposal",
@@ -193,6 +201,11 @@ def test_workflow_state_rejects_rfp_id_mismatch() -> None:
             assessment_id="assessment-001",
             proposal_document_id="proposal-001",
             rfp_document_id="rfp-001",
+            orchestrator_input=OrchestratorInput(
+                assessment_id="assessment-001",
+                proposal_document_id="proposal-001",
+                rfp_document_id="rfp-001",
+            ),
             proposal_analysis_input=ProposalAnalysisInput(
                 assessment_id="assessment-001",
                 proposal_document_id="proposal-001",

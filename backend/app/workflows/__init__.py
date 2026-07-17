@@ -3,7 +3,9 @@ from app.workflows.assessment_graph import (
 )
 from app.workflows.nodes import (
     AssessmentWorkflowNodes,
+    OrchestratorAgentProtocol,
     ProposalAnalysisAgentProtocol,
+    VendorResearchAgentProtocol,
 )
 from app.workflows.state import (
     AgentExecutionRecord,
@@ -26,4 +28,5 @@ __all__ = [
     "WorkflowRoute",
     "WorkflowStatus",
     "create_assessment_graph",
+    "VendorResearchAgentProtocol",
 ]
