@@ -43,12 +43,10 @@ class VendorResearchCitationEvaluator(
         evaluation_findings: list[EvaluationFinding] = []
 
         inventory_by_evidence_id = {
-            evidence.evidence_id: evidence
-            for evidence in target.retrieved_evidence
+            evidence.evidence_id: evidence for evidence in target.retrieved_evidence
         }
         inventory_by_chunk_id = {
-            evidence.chunk_id: evidence
-            for evidence in target.retrieved_evidence
+            evidence.chunk_id: evidence for evidence in target.retrieved_evidence
         }
 
         findings_requiring_evidence = 0
@@ -57,21 +55,12 @@ class VendorResearchCitationEvaluator(
         invalid_citation_count = 0
         duplicate_citation_count = 0
 
-        allowed_source_types = set(
-            VENDOR_RESEARCH_ALLOWED_SOURCE_TYPES
-        )
+        allowed_source_types = set(VENDOR_RESEARCH_ALLOWED_SOURCE_TYPES)
 
-        for finding_index, vendor_finding in enumerate(
-            target.result.findings
-        ):
-            finding_location = (
-                f"result.findings[{finding_index}]"
-            )
+        for finding_index, vendor_finding in enumerate(target.result.findings):
+            finding_location = f"result.findings[{finding_index}]"
 
-            requires_evidence = (
-                vendor_finding.confidence
-                is not VendorFindingConfidence.LOW
-            )
+            requires_evidence = vendor_finding.confidence is not VendorFindingConfidence.LOW
 
             if requires_evidence:
                 findings_requiring_evidence += 1
@@ -82,10 +71,7 @@ class VendorResearchCitationEvaluator(
             if requires_evidence and not vendor_finding.evidence:
                 evaluation_findings.append(
                     EvaluationFinding(
-                        finding_id=(
-                            "missing-vendor-evidence-"
-                            f"{vendor_finding.finding_id}"
-                        ),
+                        finding_id=(f"missing-vendor-evidence-{vendor_finding.finding_id}"),
                         description=(
                             "A medium- or high-confidence vendor "
                             "finding has no supporting evidence."
@@ -96,12 +82,8 @@ class VendorResearchCitationEvaluator(
                             vendor_finding.finding_id,
                         ],
                         metadata={
-                            "confidence": (
-                                vendor_finding.confidence.value
-                            ),
-                            "category": (
-                                vendor_finding.category.value
-                            ),
+                            "confidence": (vendor_finding.confidence.value),
+                            "category": (vendor_finding.category.value),
                         },
                     )
                 )
@@ -110,19 +92,12 @@ class VendorResearchCitationEvaluator(
             seen_evidence_ids: set[str] = set()
             seen_chunk_ids: set[str] = set()
 
-            for evidence_index, cited_evidence in enumerate(
-                vendor_finding.evidence
-            ):
-                evidence_location = (
-                    f"{finding_location}"
-                    f".evidence[{evidence_index}]"
-                )
+            for evidence_index, cited_evidence in enumerate(vendor_finding.evidence):
+                evidence_location = f"{finding_location}.evidence[{evidence_index}]"
 
                 is_duplicate = (
-                    cited_evidence.evidence_id
-                    in seen_evidence_ids
-                    or cited_evidence.chunk_id
-                    in seen_chunk_ids
+                    cited_evidence.evidence_id in seen_evidence_ids
+                    or cited_evidence.chunk_id in seen_chunk_ids
                 )
 
                 if is_duplicate:
@@ -151,25 +126,13 @@ class VendorResearchCitationEvaluator(
                     )
                     continue
 
-                seen_evidence_ids.add(
-                    cited_evidence.evidence_id
-                )
-                seen_chunk_ids.add(
-                    cited_evidence.chunk_id
-                )
+                seen_evidence_ids.add(cited_evidence.evidence_id)
+                seen_chunk_ids.add(cited_evidence.chunk_id)
 
-                retrieved_evidence = (
-                    inventory_by_evidence_id.get(
-                        cited_evidence.evidence_id
-                    )
-                )
+                retrieved_evidence = inventory_by_evidence_id.get(cited_evidence.evidence_id)
 
                 if retrieved_evidence is None:
-                    retrieved_evidence = (
-                        inventory_by_chunk_id.get(
-                            cited_evidence.chunk_id
-                        )
-                    )
+                    retrieved_evidence = inventory_by_chunk_id.get(cited_evidence.chunk_id)
 
                 if retrieved_evidence is None:
                     invalid_citation_count += 1
@@ -229,21 +192,14 @@ class VendorResearchCitationEvaluator(
                     )
                     continue
 
-                if (
-                    cited_evidence.source_type.value
-                    not in allowed_source_types
-                ):
+                if cited_evidence.source_type.value not in allowed_source_types:
                     invalid_citation_count += 1
 
                     evaluation_findings.append(
                         EvaluationFinding(
-                            finding_id=(
-                                "unapproved-source-type-"
-                                f"{cited_evidence.evidence_id}"
-                            ),
+                            finding_id=(f"unapproved-source-type-{cited_evidence.evidence_id}"),
                             description=(
-                                "The cited vendor evidence uses an "
-                                "unapproved source type."
+                                "The cited vendor evidence uses an unapproved source type."
                             ),
                             severity=EvaluationSeverity.CRITICAL,
                             location=evidence_location,
@@ -251,10 +207,7 @@ class VendorResearchCitationEvaluator(
                                 cited_evidence.evidence_id,
                             ],
                             metadata={
-                                "source_type": (
-                                    cited_evidence
-                                    .source_type.value
-                                ),
+                                "source_type": (cited_evidence.source_type.value),
                             },
                         )
                     )
@@ -266,13 +219,9 @@ class VendorResearchCitationEvaluator(
                     evaluation_findings.append(
                         EvaluationFinding(
                             finding_id=(
-                                "empty-vendor-supporting-text-"
-                                f"{cited_evidence.evidence_id}"
+                                f"empty-vendor-supporting-text-{cited_evidence.evidence_id}"
                             ),
-                            description=(
-                                "The vendor citation contains no "
-                                "supporting text."
-                            ),
+                            description=("The vendor citation contains no supporting text."),
                             severity=EvaluationSeverity.HIGH,
                             location=evidence_location,
                             related_ids=[
@@ -290,9 +239,7 @@ class VendorResearchCitationEvaluator(
         )
 
         coverage_score = self._calculate_coverage_score(
-            findings_requiring_evidence=(
-                findings_requiring_evidence
-            ),
+            findings_requiring_evidence=(findings_requiring_evidence),
             findings=target.result.findings,
         )
 
@@ -301,10 +248,7 @@ class VendorResearchCitationEvaluator(
             invalid_citation_count=invalid_citation_count,
         )
 
-        score = (
-            coverage_score * 0.5
-            + integrity_score * 0.5
-        )
+        score = coverage_score * 0.5 + integrity_score * 0.5
 
         has_blocking_failure = any(
             finding.severity
@@ -315,29 +259,17 @@ class VendorResearchCitationEvaluator(
             for finding in evaluation_findings
         )
 
-        warning_only = (
-            bool(evaluation_findings)
-            and not has_blocking_failure
-        )
+        warning_only = bool(evaluation_findings) and not has_blocking_failure
 
         if has_blocking_failure:
             status = EvaluationStatus.FAILED
-            summary = (
-                "One or more vendor findings contain missing "
-                "or invalid evidence citations."
-            )
+            summary = "One or more vendor findings contain missing or invalid evidence citations."
         elif warning_only:
             status = EvaluationStatus.WARNING
-            summary = (
-                "Vendor citation validation completed with "
-                "non-blocking warnings."
-            )
+            summary = "Vendor citation validation completed with non-blocking warnings."
         else:
             status = EvaluationStatus.PASSED
-            summary = (
-                "Vendor findings passed citation coverage and "
-                "integrity validation."
-            )
+            summary = "Vendor findings passed citation coverage and integrity validation."
 
         return EvaluationResult(
             evaluator_name=self.name,
@@ -347,25 +279,13 @@ class VendorResearchCitationEvaluator(
             summary=summary,
             findings=evaluation_findings,
             metrics={
-                "total_findings": len(
-                    target.result.findings
-                ),
-                "findings_requiring_evidence": (
-                    findings_requiring_evidence
-                ),
-                "findings_with_evidence": (
-                    findings_with_evidence
-                ),
+                "total_findings": len(target.result.findings),
+                "findings_requiring_evidence": (findings_requiring_evidence),
+                "findings_with_evidence": (findings_with_evidence),
                 "valid_citation_count": valid_citation_count,
-                "invalid_citation_count": (
-                    invalid_citation_count
-                ),
-                "duplicate_citation_count": (
-                    duplicate_citation_count
-                ),
-                "retrieved_evidence_count": len(
-                    target.retrieved_evidence
-                ),
+                "invalid_citation_count": (invalid_citation_count),
+                "duplicate_citation_count": (duplicate_citation_count),
+                "retrieved_evidence_count": len(target.retrieved_evidence),
                 "citation_coverage": coverage_score,
                 "citation_integrity": integrity_score,
             },
@@ -396,8 +316,7 @@ class VendorResearchCitationEvaluator(
         return [
             field_name
             for field_name in compared_fields
-            if getattr(actual, field_name)
-            != getattr(retrieved, field_name)
+            if getattr(actual, field_name) != getattr(retrieved, field_name)
         ]
 
     @staticmethod
@@ -407,41 +326,26 @@ class VendorResearchCitationEvaluator(
     ) -> None:
         """Ensure stale evidence is declared in the result."""
 
-        declared_stale_ids = set(
-            target.result.stale_evidence_ids
-        )
+        declared_stale_ids = set(target.result.stale_evidence_ids)
 
         actual_stale_ids = {
             evidence.evidence_id
             for evidence in target.retrieved_evidence
-            if evidence.freshness
-            is VendorEvidenceFreshness.STALE
+            if evidence.freshness is VendorEvidenceFreshness.STALE
         }
 
-        missing_declarations = (
-            actual_stale_ids - declared_stale_ids
-        )
+        missing_declarations = actual_stale_ids - declared_stale_ids
 
-        unknown_declarations = (
-            declared_stale_ids
-            - {
-                evidence.evidence_id
-                for evidence in target.retrieved_evidence
-            }
-        )
+        unknown_declarations = declared_stale_ids - {
+            evidence.evidence_id for evidence in target.retrieved_evidence
+        }
 
-        for evidence_id in sorted(
-            missing_declarations
-        ):
+        for evidence_id in sorted(missing_declarations):
             findings.append(
                 EvaluationFinding(
-                    finding_id=(
-                        "undeclared-stale-evidence-"
-                        f"{evidence_id}"
-                    ),
+                    finding_id=(f"undeclared-stale-evidence-{evidence_id}"),
                     description=(
-                        "Retrieved stale evidence was not declared "
-                        "in stale_evidence_ids."
+                        "Retrieved stale evidence was not declared in stale_evidence_ids."
                     ),
                     severity=EvaluationSeverity.HIGH,
                     location="result.stale_evidence_ids",
@@ -449,18 +353,12 @@ class VendorResearchCitationEvaluator(
                 )
             )
 
-        for evidence_id in sorted(
-            unknown_declarations
-        ):
+        for evidence_id in sorted(unknown_declarations):
             findings.append(
                 EvaluationFinding(
-                    finding_id=(
-                        "unknown-stale-evidence-"
-                        f"{evidence_id}"
-                    ),
+                    finding_id=(f"unknown-stale-evidence-{evidence_id}"),
                     description=(
-                        "stale_evidence_ids contains an evidence "
-                        "ID absent from retrieved evidence."
+                        "stale_evidence_ids contains an evidence ID absent from retrieved evidence."
                     ),
                     severity=EvaluationSeverity.HIGH,
                     location="result.stale_evidence_ids",
@@ -481,17 +379,10 @@ class VendorResearchCitationEvaluator(
         covered_findings = sum(
             1
             for finding in findings
-            if (
-                finding.confidence
-                is not VendorFindingConfidence.LOW
-                and bool(finding.evidence)
-            )
+            if (finding.confidence is not VendorFindingConfidence.LOW and bool(finding.evidence))
         )
 
-        return (
-            covered_findings
-            / findings_requiring_evidence
-        )
+        return covered_findings / findings_requiring_evidence
 
     @staticmethod
     def _calculate_integrity_score(
@@ -500,10 +391,7 @@ class VendorResearchCitationEvaluator(
     ) -> float:
         """Calculate evidence-citation integrity."""
 
-        citation_count = (
-            valid_citation_count
-            + invalid_citation_count
-        )
+        citation_count = valid_citation_count + invalid_citation_count
 
         if citation_count == 0:
             return 1.0

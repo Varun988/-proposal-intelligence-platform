@@ -51,17 +51,13 @@ class VendorResearchAgent:
     ) -> None:
         if max_tool_calls < 1:
             raise AgentConfigurationError(
-                "Vendor Research Agent must allow at least "
-                "one tool call."
+                "Vendor Research Agent must allow at least one tool call."
             )
 
         self._tool_registry = tool_registry
         self._llm_service = llm_service
         self._max_tool_calls = max_tool_calls
-        self._current_date = (
-            current_date
-            or datetime.now(UTC).date()
-        )
+        self._current_date = current_date or datetime.now(UTC).date()
 
         self._validate_required_tools()
 
@@ -113,9 +109,7 @@ class VendorResearchAgent:
                 },
                 agent_name=self.name,
                 metadata={
-                    "assessment_id": (
-                        research_input.assessment_id
-                    ),
+                    "assessment_id": (research_input.assessment_id),
                     "vendor_name": research_input.vendor_name,
                 },
             )
@@ -131,8 +125,7 @@ class VendorResearchAgent:
 
             if not isinstance(candidates, list):
                 raise AgentOutputValidationError(
-                    "Vendor evidence search returned an invalid "
-                    "candidate collection."
+                    "Vendor evidence search returned an invalid candidate collection."
                 )
 
             retrieved_candidates.extend(candidates)
@@ -142,9 +135,7 @@ class VendorResearchAgent:
                     tool_name="search_evidence",
                     query=objective,
                     succeeded=tool_result.succeeded,
-                    execution_time_ms=(
-                        tool_result.execution_time_ms
-                    ),
+                    execution_time_ms=(tool_result.execution_time_ms),
                     result_count=len(candidates),
                 )
             )
@@ -189,10 +180,7 @@ class VendorResearchAgent:
             self.name,
         )
 
-        available_tool_names = {
-            definition.name
-            for definition in definitions
-        }
+        available_tool_names = {definition.name for definition in definitions}
 
         required_tools = {
             "search_evidence",
@@ -201,28 +189,19 @@ class VendorResearchAgent:
         missing_tools = required_tools - available_tool_names
 
         if missing_tools:
-            missing_text = ", ".join(
-                sorted(missing_tools)
-            )
+            missing_text = ", ".join(sorted(missing_tools))
 
             raise AgentConfigurationError(
-                "Vendor Research Agent is missing required "
-                f"tools: {missing_text}."
+                f"Vendor Research Agent is missing required tools: {missing_text}."
             )
 
-        unauthorized_tools = (
-            available_tool_names
-            - set(VENDOR_RESEARCH_ALLOWED_TOOLS)
-        )
+        unauthorized_tools = available_tool_names - set(VENDOR_RESEARCH_ALLOWED_TOOLS)
 
         if unauthorized_tools:
-            unauthorized_text = ", ".join(
-                sorted(unauthorized_tools)
-            )
+            unauthorized_text = ", ".join(sorted(unauthorized_tools))
 
             raise AgentConfigurationError(
-                "Vendor Research Agent received tools outside "
-                f"its allowlist: {unauthorized_text}."
+                f"Vendor Research Agent received tools outside its allowlist: {unauthorized_text}."
             )
 
     @staticmethod
@@ -232,10 +211,7 @@ class VendorResearchAgent:
         """Build focused vendor-evidence search queries."""
 
         return [
-            (
-                f"Find approved evidence about {objective} "
-                f"for vendor {research_input.vendor_name}."
-            )
+            (f"Find approved evidence about {objective} for vendor {research_input.vendor_name}.")
             for objective in research_input.research_objectives
         ]
 
@@ -246,17 +222,12 @@ class VendorResearchAgent:
         """Extract a retrieval response from tool output."""
 
         if output is None:
-            raise AgentOutputValidationError(
-                "Vendor evidence search returned no output."
-            )
+            raise AgentOutputValidationError("Vendor evidence search returned no output.")
 
         response = output.get("response")
 
         if not isinstance(response, dict):
-            raise AgentOutputValidationError(
-                "Vendor evidence search returned an invalid "
-                "response."
-            )
+            raise AgentOutputValidationError("Vendor evidence search returned an invalid response.")
 
         return response
 
@@ -273,34 +244,23 @@ class VendorResearchAgent:
         ] = {}
 
         allowed_source_types = {
-            source_type.value
-            for source_type
-            in research_input.allowed_source_types
+            source_type.value for source_type in research_input.allowed_source_types
         }
 
-        policy_source_types = set(
-            VENDOR_RESEARCH_ALLOWED_SOURCE_TYPES
-        )
+        policy_source_types = set(VENDOR_RESEARCH_ALLOWED_SOURCE_TYPES)
 
-        permitted_source_types = (
-            allowed_source_types
-            & policy_source_types
-        )
+        permitted_source_types = allowed_source_types & policy_source_types
 
         for candidate in retrieved_candidates:
             evidence = self._candidate_to_evidence(
                 candidate=candidate,
-                stale_after_days=(
-                    research_input.stale_after_days
-                ),
+                stale_after_days=(research_input.stale_after_days),
             )
 
             if evidence is None:
                 continue
 
-            if evidence.source_type.value not in (
-                permitted_source_types
-            ):
+            if evidence.source_type.value not in (permitted_source_types):
                 continue
 
             evidence_by_chunk_id[evidence.chunk_id] = evidence
@@ -364,21 +324,13 @@ class VendorResearchAgent:
             return None
 
         try:
-            source_type = VendorEvidenceSourceType(
-                source_type_value
-            )
-            category = VendorEvidenceCategory(
-                category_value
-            )
+            source_type = VendorEvidenceSourceType(source_type_value)
+            category = VendorEvidenceCategory(category_value)
         except ValueError:
             return None
 
-        publication_date = self._parse_date(
-            metadata.get("publication_date")
-        )
-        retrieved_date = self._parse_date(
-            metadata.get("retrieved_date")
-        )
+        publication_date = self._parse_date(metadata.get("publication_date"))
+        retrieved_date = self._parse_date(metadata.get("retrieved_date"))
 
         freshness = self._classify_freshness(
             publication_date=publication_date,
@@ -400,9 +352,7 @@ class VendorResearchAgent:
             publication_date=publication_date,
             retrieved_date=retrieved_date,
             freshness=freshness,
-            retrieval_score=candidate.get(
-                "retrieval_score"
-            ),
+            retrieval_score=candidate.get("retrieval_score"),
             final_score=candidate.get("final_score"),
             metadata={
                 key: value
@@ -428,17 +378,12 @@ class VendorResearchAgent:
     ) -> VendorEvidenceFreshness:
         """Classify evidence freshness from available dates."""
 
-        reference_date = (
-            publication_date
-            or retrieved_date
-        )
+        reference_date = publication_date or retrieved_date
 
         if reference_date is None:
             return VendorEvidenceFreshness.UNKNOWN
 
-        evidence_age = (
-            self._current_date - reference_date
-        ).days
+        evidence_age = (self._current_date - reference_date).days
 
         if evidence_age < 0:
             return VendorEvidenceFreshness.UNKNOWN
@@ -473,16 +418,12 @@ class VendorResearchAgent:
         """Build a structured Vendor Research Agent request."""
 
         user_payload = {
-            "task": (
-                "Research the vendor using only the supplied "
-                "approved evidence."
-            ),
+            "task": ("Research the vendor using only the supplied approved evidence."),
             "research_input": research_input.model_dump(
                 mode="json",
             ),
             "approved_evidence": [
-                evidence.model_dump(mode="json")
-                for evidence in evidence_inventory
+                evidence.model_dump(mode="json") for evidence in evidence_inventory
             ],
             "output_requirements": {
                 "facts_must_have_citations": True,
@@ -497,9 +438,7 @@ class VendorResearchAgent:
             messages=[
                 LLMMessage(
                     role=MessageRole.SYSTEM,
-                    content=(
-                        VENDOR_RESEARCH_SYSTEM_INSTRUCTIONS
-                    ),
+                    content=(VENDOR_RESEARCH_SYSTEM_INSTRUCTIONS),
                 ),
                 LLMMessage(
                     role=MessageRole.USER,
@@ -511,17 +450,11 @@ class VendorResearchAgent:
             ],
             temperature=0.0,
             max_output_tokens=4_096,
-            response_schema=(
-                VendorResearchResult.model_json_schema()
-            ),
+            response_schema=(VendorResearchResult.model_json_schema()),
             metadata={
                 "agent_name": VENDOR_RESEARCH_AGENT_NAME,
-                "instruction_version": (
-                    VENDOR_RESEARCH_INSTRUCTION_VERSION
-                ),
-                "assessment_id": (
-                    research_input.assessment_id
-                ),
+                "instruction_version": (VENDOR_RESEARCH_INSTRUCTION_VERSION),
+                "assessment_id": (research_input.assessment_id),
                 "vendor_name": research_input.vendor_name,
             },
         )
@@ -535,8 +468,7 @@ class VendorResearchAgent:
 
         if structured_data is None:
             raise AgentOutputValidationError(
-                "Vendor Research Agent received no structured "
-                "LLM output."
+                "Vendor Research Agent received no structured LLM output."
             )
 
         try:
@@ -545,23 +477,17 @@ class VendorResearchAgent:
             )
         except ValidationError as error:
             raise AgentOutputValidationError(
-                "Vendor Research Agent returned invalid "
-                "structured output."
+                "Vendor Research Agent returned invalid structured output."
             ) from error
 
         if result.assessment_id != research_input.assessment_id:
             raise AgentOutputValidationError(
-                "Vendor research assessment ID does not match "
-                "the requested assessment."
+                "Vendor research assessment ID does not match the requested assessment."
             )
 
-        if (
-            result.vendor_name.casefold()
-            != research_input.vendor_name.casefold()
-        ):
+        if result.vendor_name.casefold() != research_input.vendor_name.casefold():
             raise AgentOutputValidationError(
-                "Vendor research output vendor name does not "
-                "match the requested vendor."
+                "Vendor research output vendor name does not match the requested vendor."
             )
 
         return result

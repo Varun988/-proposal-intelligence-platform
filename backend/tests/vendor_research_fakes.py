@@ -61,33 +61,20 @@ class FakeVendorSearchTool(BaseTool):
                         "chunk": {
                             "chunk_id": "vendor-profile-chunk",
                             "document_id": "vendor-profile-001",
-                            "text": (
-                                "Example Digital Services was "
-                                "established in 2012."
-                            ),
+                            "text": ("Example Digital Services was established in 2012."),
                             "page_number": 2,
                             "page_chunk_index": 0,
                             "document_chunk_index": 0,
                             "citation": {
-                                "document_id": (
-                                    "vendor-profile-001"
-                                ),
-                                "file_name": (
-                                    "synthetic-vendor-profile.pdf"
-                                ),
+                                "document_id": ("vendor-profile-001"),
+                                "file_name": ("synthetic-vendor-profile.pdf"),
                                 "page_number": 2,
                                 "checksum_sha256": "a" * 64,
                             },
                             "metadata": {
-                                "source_type": (
-                                    "synthetic_profile"
-                                ),
-                                "evidence_category": (
-                                    "company_profile"
-                                ),
-                                "source_name": (
-                                    "Synthetic Vendor Profile"
-                                ),
+                                "source_type": ("synthetic_profile"),
+                                "evidence_category": ("company_profile"),
+                                "source_name": ("Synthetic Vendor Profile"),
                                 "publication_date": "2026-01-01",
                                 "retrieved_date": "2026-07-17",
                             },
@@ -98,9 +85,7 @@ class FakeVendorSearchTool(BaseTool):
                         "final_score": 0.95,
                         "duplicate_chunk_ids": [],
                         "metadata": {},
-                        "citation_label": (
-                            "synthetic-vendor-profile.pdf, page 2"
-                        ),
+                        "citation_label": ("synthetic-vendor-profile.pdf, page 2"),
                         "duplicate_count": 0,
                     }
                 ],
