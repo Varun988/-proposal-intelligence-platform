@@ -3,6 +3,10 @@ from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.agents.orchestrator.schemas import (
+    OrchestratorExecution,
+    OrchestratorInput,
+)
 from app.agents.proposal_analysis.schemas import (
     ProposalAnalysisExecution,
     ProposalAnalysisInput,
@@ -15,6 +19,9 @@ class WorkflowStatus(StrEnum):
 
     CREATED = "created"
     INITIALIZING = "initializing"
+    ORCHESTRATION_PENDING = "orchestration_pending"
+    ORCHESTRATION_RUNNING = "orchestration_running"
+    ORCHESTRATION_COMPLETED = "orchestration_completed"
     PROPOSAL_ANALYSIS_PENDING = "proposal_analysis_pending"
     PROPOSAL_ANALYSIS_RUNNING = "proposal_analysis_running"
     PROPOSAL_ANALYSIS_COMPLETED = "proposal_analysis_completed"
@@ -30,6 +37,7 @@ class WorkflowStatus(StrEnum):
 class WorkflowRoute(StrEnum):
     """Possible routing decisions made by the workflow."""
 
+    RUN_ORCHESTRATION = "run_orchestration"
     RUN_PROPOSAL_ANALYSIS = "run_proposal_analysis"
     RUN_EVALUATION = "run_evaluation"
     REQUIRE_HUMAN_REVIEW = "require_human_review"
@@ -43,6 +51,8 @@ class WorkflowEventType(StrEnum):
 
     WORKFLOW_CREATED = "workflow_created"
     STATUS_CHANGED = "status_changed"
+    ORCHESTRATION_STARTED = "orchestration_started"
+    ORCHESTRATION_COMPLETED = "orchestration_completed"
     AGENT_STARTED = "agent_started"
     AGENT_COMPLETED = "agent_completed"
     EVALUATION_STARTED = "evaluation_started"
@@ -59,9 +69,7 @@ class WorkflowEvent(BaseModel):
     status: WorkflowStatus
     message: str = Field(min_length=1)
     agent_name: str | None = None
-    metadata: dict[str, Any] = Field(
-        default_factory=dict,
-    )
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class AgentExecutionRecord(BaseModel):
@@ -95,23 +103,16 @@ class AssessmentWorkflowState(BaseModel):
     status: WorkflowStatus = WorkflowStatus.CREATED
     next_route: WorkflowRoute | None = None
 
-    proposal_analysis_input: ProposalAnalysisInput
-    proposal_analysis_execution: (
-        ProposalAnalysisExecution | None
-    ) = None
-    proposal_analysis_evaluation: (
-        AgentEvaluationReport | None
-    ) = None
+    orchestrator_input: OrchestratorInput
+    orchestrator_execution: OrchestratorExecution | None = None
 
-    agent_execution_records: list[AgentExecutionRecord] = Field(
-        default_factory=list,
-    )
-    evaluation_records: list[EvaluationRecord] = Field(
-        default_factory=list,
-    )
-    events: list[WorkflowEvent] = Field(
-        default_factory=list,
-    )
+    proposal_analysis_input: ProposalAnalysisInput
+    proposal_analysis_execution: ProposalAnalysisExecution | None = None
+    proposal_analysis_evaluation: AgentEvaluationReport | None = None
+
+    agent_execution_records: list[AgentExecutionRecord] = Field(default_factory=list)
+    evaluation_records: list[EvaluationRecord] = Field(default_factory=list)
+    events: list[WorkflowEvent] = Field(default_factory=list)
 
     current_step: int = Field(default=0, ge=0)
     maximum_steps: int = Field(default=12, ge=1, le=50)
@@ -121,45 +122,45 @@ class AssessmentWorkflowState(BaseModel):
     human_review_required: bool = False
     human_review_reason: str | None = None
 
-    completed_agents: list[str] = Field(
-        default_factory=list,
-    )
-    errors: list[str] = Field(
-        default_factory=list,
-    )
+    completed_agents: list[str] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def validate_identity_consistency(
-        self,
-    ) -> "AssessmentWorkflowState":
-        """Ensure nested proposal input matches workflow identity."""
+    def validate_identity_consistency(self) -> "AssessmentWorkflowState":
+        """Ensure nested inputs match the workflow identity."""
 
-        if (
-            self.proposal_analysis_input.assessment_id
-            != self.assessment_id
-        ):
-            raise ValueError(
-                "Proposal analysis assessment ID must match "
-                "the workflow assessment ID."
-            )
+        if self.orchestrator_input.assessment_id != self.assessment_id:
+            raise ValueError("Orchestrator assessment ID must match the workflow assessment ID.")
 
-        if (
-            self.proposal_analysis_input.proposal_document_id
-            != self.proposal_document_id
-        ):
+        if self.orchestrator_input.proposal_document_id != self.proposal_document_id:
             raise ValueError(
-                "Proposal analysis document ID must match "
-                "the workflow proposal document ID."
+                "Orchestrator proposal document ID must match the workflow proposal document ID."
             )
 
         if (
             self.rfp_document_id is not None
-            and self.proposal_analysis_input.rfp_document_id
-            != self.rfp_document_id
+            and self.orchestrator_input.rfp_document_id != self.rfp_document_id
         ):
             raise ValueError(
-                "Proposal analysis RFP document ID must match "
-                "the workflow RFP document ID."
+                "Orchestrator RFP document ID must match the workflow RFP document ID."
+            )
+
+        if self.proposal_analysis_input.assessment_id != self.assessment_id:
+            raise ValueError(
+                "Proposal analysis assessment ID must match the workflow assessment ID."
+            )
+
+        if self.proposal_analysis_input.proposal_document_id != self.proposal_document_id:
+            raise ValueError(
+                "Proposal analysis document ID must match the workflow proposal document ID."
+            )
+
+        if (
+            self.rfp_document_id is not None
+            and self.proposal_analysis_input.rfp_document_id != self.rfp_document_id
+        ):
+            raise ValueError(
+                "Proposal analysis RFP document ID must match the workflow RFP document ID."
             )
 
         return self
@@ -181,6 +182,11 @@ class AssessmentWorkflowState(BaseModel):
         """Return whether proposal analysis passed evaluation."""
 
         return bool(
-            self.proposal_analysis_evaluation
-            and self.proposal_analysis_evaluation.release_approved
+            self.proposal_analysis_evaluation and self.proposal_analysis_evaluation.release_approved
         )
+
+    @property
+    def orchestration_completed(self) -> bool:
+        """Return whether a validated orchestration plan exists."""
+
+        return self.orchestrator_execution is not None

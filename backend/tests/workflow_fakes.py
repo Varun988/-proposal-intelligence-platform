@@ -35,9 +35,7 @@ class FakeProposalAnalysisAgent:
         )
 
         if self.should_fail:
-            raise RuntimeError(
-                "Synthetic Proposal Analysis Agent failure."
-            )
+            raise RuntimeError("Synthetic Proposal Analysis Agent failure.")
 
         evidence = EvidenceReference(
             chunk_id="chunk-001",
@@ -45,18 +43,14 @@ class FakeProposalAnalysisAgent:
             file_name="synthetic-proposal.pdf",
             page_number=4,
             citation_label="synthetic-proposal.pdf, page 4",
-            supporting_text=(
-                "The implementation timeline is twelve months."
-            ),
+            supporting_text=("The implementation timeline is twelve months."),
             retrieval_score=0.90,
             final_score=0.95,
         )
 
         result = ProposalAnalysisResult(
             assessment_id=analysis_input.assessment_id,
-            proposal_document_id=(
-                analysis_input.proposal_document_id
-            ),
+            proposal_document_id=(analysis_input.proposal_document_id),
             summary=ProposalSummary(
                 delivery_timeline="Twelve months",
             ),
@@ -65,32 +59,19 @@ class FakeProposalAnalysisAgent:
                     finding_id="finding-001",
                     category=FindingCategory.DELIVERY,
                     title="Twelve-month delivery timeline",
-                    description=(
-                        "The proposal states a twelve-month "
-                        "delivery timeline."
-                    ),
+                    description=("The proposal states a twelve-month delivery timeline."),
                     severity=FindingSeverity.MEDIUM,
                     confidence=FindingConfidence.HIGH,
                     evidence=[
                         evidence.model_copy(deep=True),
                     ],
-                    recommendation=(
-                        "Confirm alignment with the target "
-                        "go-live date."
-                    ),
-                    human_review_required=(
-                        not self.disable_human_review
-                    ),
+                    recommendation=("Confirm alignment with the target go-live date."),
+                    human_review_required=(not self.disable_human_review),
                 )
             ],
-            executive_summary=(
-                "The proposal contains a twelve-month "
-                "delivery timeline."
-            ),
+            executive_summary=("The proposal contains a twelve-month delivery timeline."),
             overall_confidence=FindingConfidence.HIGH,
-            human_review_required=(
-                not self.disable_human_review
-            ),
+            human_review_required=(not self.disable_human_review),
         )
 
         return ProposalAnalysisExecution(

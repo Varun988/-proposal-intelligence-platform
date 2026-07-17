@@ -183,13 +183,9 @@ def build_retrieval_service(
 ) -> RetrievalService:
     """Create and populate the real local retrieval pipeline."""
 
-    embedding_provider = (
-        SentenceTransformerEmbeddingProvider(
-            model_name=settings.embedding_model,
-            normalize_embeddings=(
-                settings.normalize_embeddings
-            ),
-        )
+    embedding_provider = SentenceTransformerEmbeddingProvider(
+        model_name=settings.embedding_model,
+        normalize_embeddings=(settings.normalize_embeddings),
     )
 
     embedding_service = EmbeddingService(
@@ -280,10 +276,7 @@ async def run_smoke_test() -> None:
             "security controls",
         ],
         requirements=[
-            (
-                "The proposal must provide an implementation "
-                "timeline and delivery approach."
-            )
+            ("The proposal must provide an implementation timeline and delivery approach.")
         ],
     )
 
@@ -291,16 +284,12 @@ async def run_smoke_test() -> None:
         analysis_input,
     )
 
-    evaluation_runner = (
-        create_proposal_analysis_evaluation_runner()
-    )
+    evaluation_runner = create_proposal_analysis_evaluation_runner()
 
     evaluation_report = evaluation_runner.run(
         target=execution,
         assessment_id=ASSESSMENT_ID,
-        agent_instruction_version=(
-            execution.instruction_version
-        ),
+        agent_instruction_version=(execution.instruction_version),
     )
 
     print()
@@ -323,19 +312,10 @@ async def run_smoke_test() -> None:
     print(f"Agent: {agent.name}")
     print(f"LLM provider: {execution.llm_provider}")
     print(f"LLM model: {execution.llm_model}")
-    print(
-        "Instruction version: "
-        f"{execution.instruction_version}"
-    )
+    print(f"Instruction version: {execution.instruction_version}")
     print(f"Tool calls: {execution.tool_call_count}")
-    print(
-        "Retrieved evidence records: "
-        f"{len(execution.retrieved_evidence)}"
-    )
-    print(
-        "Execution time: "
-        f"{execution.total_execution_time_ms:.2f} ms"
-    )
+    print(f"Retrieved evidence records: {len(execution.retrieved_evidence)}")
+    print(f"Execution time: {execution.total_execution_time_ms:.2f} ms")
 
     for index, trace in enumerate(
         execution.tool_calls,
@@ -353,18 +333,9 @@ async def run_smoke_test() -> None:
     print("EVALUATION REPORT")
     print("=" * 72)
     print(f"Evaluation ID: {evaluation_report.evaluation_id}")
-    print(
-        "Overall score: "
-        f"{evaluation_report.overall_score:.2f}"
-    )
-    print(
-        "Release approved: "
-        f"{evaluation_report.release_approved}"
-    )
-    print(
-        "Blocking gate failures: "
-        f"{evaluation_report.blocking_gate_failure_count}"
-    )
+    print(f"Overall score: {evaluation_report.overall_score:.2f}")
+    print(f"Release approved: {evaluation_report.release_approved}")
+    print(f"Blocking gate failures: {evaluation_report.blocking_gate_failure_count}")
 
     for result in evaluation_report.results:
         print()
@@ -374,10 +345,7 @@ async def run_smoke_test() -> None:
         print(f"Summary: {result.summary}")
 
         for finding in result.findings:
-            print(
-                f"- [{finding.severity.value}] "
-                f"{finding.description}"
-            )
+            print(f"- [{finding.severity.value}] {finding.description}")
 
     logger.info(
         "Live Proposal Analysis Agent smoke test completed",
@@ -385,33 +353,21 @@ async def run_smoke_test() -> None:
             "assessment_id": ASSESSMENT_ID,
             "agent_name": agent.name,
             "tool_call_count": execution.tool_call_count,
-            "finding_count": len(
-                execution.result.findings
-            ),
-            "release_approved": (
-                evaluation_report.release_approved
-            ),
-            "overall_evaluation_score": (
-                evaluation_report.overall_score
-            ),
+            "finding_count": len(execution.result.findings),
+            "release_approved": (evaluation_report.release_approved),
+            "overall_evaluation_score": (evaluation_report.overall_score),
         },
     )
 
     if not execution.result.human_review_required:
-        raise RuntimeError(
-            "Smoke test failed: human review was disabled."
-        )
+        raise RuntimeError("Smoke test failed: human review was disabled.")
 
     if execution.tool_call_count == 0:
-        raise RuntimeError(
-            "Smoke test failed: no evidence-search tools "
-            "were executed."
-        )
+        raise RuntimeError("Smoke test failed: no evidence-search tools were executed.")
 
     if not evaluation_report.release_approved:
         raise RuntimeError(
-            "Smoke test completed, but the deterministic "
-            "evaluation release gates did not pass."
+            "Smoke test completed, but the deterministic evaluation release gates did not pass."
         )
 
     print()

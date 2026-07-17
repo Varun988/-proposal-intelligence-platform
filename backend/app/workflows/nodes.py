@@ -1,6 +1,10 @@
-from collections.abc import Awaitable
 from typing import Protocol
 
+from app.agents.orchestrator.schemas import (
+    OrchestratorExecution,
+    OrchestratorInput,
+    SpecialistAgentName,
+)
 from app.agents.proposal_analysis.schemas import (
     ProposalAnalysisExecution,
     ProposalAnalysisInput,
@@ -15,6 +19,16 @@ from app.workflows.state import (
     WorkflowRoute,
     WorkflowStatus,
 )
+
+
+class OrchestratorAgentProtocol(Protocol):
+    """Minimum Orchestrator Agent interface required by workflow."""
+
+    def create_plan(
+        self,
+        orchestrator_input: OrchestratorInput,
+    ) -> OrchestratorExecution:
+        """Create a bounded specialist-agent execution plan."""
 
 
 class ProposalAnalysisAgentProtocol(Protocol):
@@ -32,9 +46,11 @@ class AssessmentWorkflowNodes:
 
     def __init__(
         self,
+        orchestrator_agent: OrchestratorAgentProtocol,
         proposal_analysis_agent: ProposalAnalysisAgentProtocol,
         evaluation_runner: AgentEvaluationRunner,
     ) -> None:
+        self._orchestrator_agent = orchestrator_agent
         self._proposal_analysis_agent = proposal_analysis_agent
         self._evaluation_runner = evaluation_runner
 
@@ -42,34 +58,108 @@ class AssessmentWorkflowNodes:
         self,
         state: AssessmentWorkflowState,
     ) -> dict[str, object]:
-        """Initialize workflow state and route to proposal analysis."""
+        """Initialize workflow state and route to orchestration."""
 
         if state.step_limit_reached:
-            return self._create_step_limit_failure(
-                state=state,
-                node_name="initialize_workflow",
-            )
+            return self._create_step_limit_failure(state, "initialize_workflow")
 
         event = WorkflowEvent(
             event_type=WorkflowEventType.STATUS_CHANGED,
-            status=WorkflowStatus.PROPOSAL_ANALYSIS_PENDING,
-            message=(
-                "Assessment workflow initialized and proposal "
-                "analysis is pending."
-            ),
+            status=WorkflowStatus.ORCHESTRATION_PENDING,
+            message=("Assessment workflow initialized and orchestration planning is pending."),
+            metadata={"previous_status": state.status.value},
+        )
+
+        return {
+            "status": WorkflowStatus.ORCHESTRATION_PENDING,
+            "next_route": WorkflowRoute.RUN_ORCHESTRATION,
+            "current_step": state.current_step + 1,
+            "events": [*state.events, event],
+        }
+
+    def create_orchestration_plan(
+        self,
+        state: AssessmentWorkflowState,
+    ) -> dict[str, object]:
+        """Create and validate the specialist-agent execution plan."""
+
+        if state.step_limit_reached:
+            return self._create_step_limit_failure(
+                state,
+                "create_orchestration_plan",
+            )
+
+        started_event = WorkflowEvent(
+            event_type=WorkflowEventType.ORCHESTRATION_STARTED,
+            status=WorkflowStatus.ORCHESTRATION_RUNNING,
+            message="Orchestrator planning started.",
+            agent_name="orchestrator",
+        )
+
+        try:
+            execution = self._orchestrator_agent.create_plan(
+                state.orchestrator_input,
+            )
+            self._validate_orchestration_execution(state, execution)
+        except Exception as error:
+            error_message = f"Orchestrator planning failed: {type(error).__name__}."
+            failure_event = WorkflowEvent(
+                event_type=WorkflowEventType.WORKFLOW_FAILED,
+                status=WorkflowStatus.HUMAN_REVIEW_REQUIRED,
+                message=error_message,
+                agent_name="orchestrator",
+                metadata={"error_type": type(error).__name__},
+            )
+            return {
+                "status": WorkflowStatus.HUMAN_REVIEW_REQUIRED,
+                "next_route": WorkflowRoute.REQUIRE_HUMAN_REVIEW,
+                "human_review_required": True,
+                "human_review_reason": error_message,
+                "current_step": state.current_step + 1,
+                "errors": [*state.errors, error_message],
+                "agent_execution_records": [
+                    *state.agent_execution_records,
+                    AgentExecutionRecord(
+                        agent_name="orchestrator",
+                        succeeded=False,
+                        tool_call_count=0,
+                        execution_time_ms=0.0,
+                        instruction_version="1.0.0",
+                        error_message=error_message,
+                    ),
+                ],
+                "events": [*state.events, started_event, failure_event],
+            }
+
+        completed_event = WorkflowEvent(
+            event_type=WorkflowEventType.ORCHESTRATION_COMPLETED,
+            status=WorkflowStatus.ORCHESTRATION_COMPLETED,
+            message="Orchestrator created a validated specialist-agent plan.",
+            agent_name="orchestrator",
             metadata={
-                "previous_status": state.status.value,
+                "task_count": execution.plan.task_count,
+                "planner_version": execution.planner_version,
             },
         )
 
         return {
-            "status": WorkflowStatus.PROPOSAL_ANALYSIS_PENDING,
+            "status": WorkflowStatus.ORCHESTRATION_COMPLETED,
             "next_route": WorkflowRoute.RUN_PROPOSAL_ANALYSIS,
+            "orchestrator_execution": execution,
+            "maximum_steps": execution.plan.maximum_steps,
             "current_step": state.current_step + 1,
-            "events": [
-                *state.events,
-                event,
+            "agent_execution_records": [
+                *state.agent_execution_records,
+                AgentExecutionRecord(
+                    agent_name="orchestrator",
+                    succeeded=True,
+                    tool_call_count=0,
+                    execution_time_ms=execution.execution_time_ms,
+                    instruction_version=execution.planner_version,
+                ),
             ],
+            "completed_agents": [*state.completed_agents, "orchestrator"],
+            "events": [*state.events, started_event, completed_event],
         }
 
     async def run_proposal_analysis(
@@ -79,10 +169,7 @@ class AssessmentWorkflowNodes:
         """Execute the Proposal Analysis Agent."""
 
         if state.step_limit_reached:
-            return self._create_step_limit_failure(
-                state=state,
-                node_name="run_proposal_analysis",
-            )
+            return self._create_step_limit_failure(state, "run_proposal_analysis")
 
         started_event = WorkflowEvent(
             event_type=WorkflowEventType.AGENT_STARTED,
@@ -96,31 +183,21 @@ class AssessmentWorkflowNodes:
                 state.proposal_analysis_input,
             )
         except Exception as error:
-            error_message = (
-                "Proposal Analysis Agent execution failed: "
-                f"{type(error).__name__}."
-            )
-
+            error_message = f"Proposal Analysis Agent execution failed: {type(error).__name__}."
             failure_event = WorkflowEvent(
                 event_type=WorkflowEventType.WORKFLOW_FAILED,
                 status=WorkflowStatus.HUMAN_REVIEW_REQUIRED,
                 message=error_message,
                 agent_name="proposal-analysis",
-                metadata={
-                    "error_type": type(error).__name__,
-                },
+                metadata={"error_type": type(error).__name__},
             )
-
             return {
                 "status": WorkflowStatus.HUMAN_REVIEW_REQUIRED,
                 "next_route": WorkflowRoute.REQUIRE_HUMAN_REVIEW,
                 "current_step": state.current_step + 1,
                 "human_review_required": True,
                 "human_review_reason": error_message,
-                "errors": [
-                    *state.errors,
-                    error_message,
-                ],
+                "errors": [*state.errors, error_message],
                 "agent_execution_records": [
                     *state.agent_execution_records,
                     AgentExecutionRecord(
@@ -132,23 +209,15 @@ class AssessmentWorkflowNodes:
                         error_message=error_message,
                     ),
                 ],
-                "events": [
-                    *state.events,
-                    started_event,
-                    failure_event,
-                ],
+                "events": [*state.events, started_event, failure_event],
             }
 
         completed_event = WorkflowEvent(
             event_type=WorkflowEventType.AGENT_COMPLETED,
             status=WorkflowStatus.PROPOSAL_ANALYSIS_COMPLETED,
-            message=(
-                "Proposal Analysis Agent execution completed."
-            ),
+            message="Proposal Analysis Agent execution completed.",
             agent_name="proposal-analysis",
-            metadata={
-                "tool_call_count": execution.tool_call_count,
-            },
+            metadata={"tool_call_count": execution.tool_call_count},
         )
 
         return {
@@ -162,23 +231,12 @@ class AssessmentWorkflowNodes:
                     agent_name="proposal-analysis",
                     succeeded=True,
                     tool_call_count=execution.tool_call_count,
-                    execution_time_ms=(
-                        execution.total_execution_time_ms
-                    ),
-                    instruction_version=(
-                        execution.instruction_version
-                    ),
+                    execution_time_ms=execution.total_execution_time_ms,
+                    instruction_version=execution.instruction_version,
                 ),
             ],
-            "completed_agents": [
-                *state.completed_agents,
-                "proposal-analysis",
-            ],
-            "events": [
-                *state.events,
-                started_event,
-                completed_event,
-            ],
+            "completed_agents": [*state.completed_agents, "proposal-analysis"],
+            "events": [*state.events, started_event, completed_event],
         }
 
     def evaluate_proposal_analysis(
@@ -189,22 +247,16 @@ class AssessmentWorkflowNodes:
 
         if state.step_limit_reached:
             return self._create_step_limit_failure(
-                state=state,
-                node_name="evaluate_proposal_analysis",
+                state,
+                "evaluate_proposal_analysis",
             )
 
         execution = state.proposal_analysis_execution
-
         if execution is None:
-            error_message = (
-                "Proposal analysis evaluation cannot run because "
-                "the agent execution is unavailable."
-            )
-
             return self._create_human_review_update(
-                state=state,
-                reason=error_message,
-                event_type=WorkflowEventType.WORKFLOW_FAILED,
+                state,
+                "Proposal analysis evaluation cannot run because the agent execution is unavailable.",
+                WorkflowEventType.WORKFLOW_FAILED,
             )
 
         started_event = WorkflowEvent(
@@ -218,29 +270,21 @@ class AssessmentWorkflowNodes:
             report = self._evaluation_runner.run(
                 target=execution,
                 assessment_id=state.assessment_id,
-                agent_instruction_version=(
-                    execution.instruction_version
-                ),
+                agent_instruction_version=execution.instruction_version,
             )
         except Exception as error:
-            error_message = (
-                "Proposal analysis evaluation failed: "
-                f"{type(error).__name__}."
+            reason = f"Proposal analysis evaluation failed: {type(error).__name__}."
+            update = self._create_human_review_update(
+                state,
+                reason,
+                WorkflowEventType.WORKFLOW_FAILED,
             )
-
-            failure_update = self._create_human_review_update(
-                state=state,
-                reason=error_message,
-                event_type=WorkflowEventType.WORKFLOW_FAILED,
-            )
-
-            failure_update["events"] = [
+            update["events"] = [
                 *state.events,
                 started_event,
-                *failure_update["events"][len(state.events):],
+                *update["events"][len(state.events) :],
             ]
-
-            return failure_update
+            return update
 
         completed_event = WorkflowEvent(
             event_type=WorkflowEventType.EVALUATION_COMPLETED,
@@ -272,16 +316,10 @@ class AssessmentWorkflowNodes:
                     evaluation_id=report.evaluation_id,
                     overall_score=report.overall_score,
                     release_approved=report.release_approved,
-                    blocking_gate_failure_count=(
-                        report.blocking_gate_failure_count
-                    ),
+                    blocking_gate_failure_count=report.blocking_gate_failure_count,
                 ),
             ],
-            "events": [
-                *state.events,
-                started_event,
-                completed_event,
-            ],
+            "events": [*state.events, started_event, completed_event],
         }
 
     def request_human_review(
@@ -290,28 +328,20 @@ class AssessmentWorkflowNodes:
     ) -> dict[str, object]:
         """Route the workflow to human review."""
 
-        reason = (
-            state.human_review_reason
-            or self._build_evaluation_failure_reason(state)
-        )
-
+        reason = state.human_review_reason or self._build_evaluation_failure_reason(state)
         event = WorkflowEvent(
             event_type=WorkflowEventType.HUMAN_REVIEW_REQUESTED,
             status=WorkflowStatus.HUMAN_REVIEW_REQUIRED,
             message=reason,
             agent_name="proposal-analysis",
         )
-
         return {
             "status": WorkflowStatus.HUMAN_REVIEW_REQUIRED,
             "next_route": None,
             "human_review_required": True,
             "human_review_reason": reason,
             "current_step": state.current_step + 1,
-            "events": [
-                *state.events,
-                event,
-            ],
+            "events": [*state.events, event],
         }
 
     def mark_ready_for_next_agent(
@@ -324,69 +354,73 @@ class AssessmentWorkflowNodes:
             event_type=WorkflowEventType.STATUS_CHANGED,
             status=WorkflowStatus.READY_FOR_NEXT_AGENT,
             message=(
-                "Proposal analysis passed its release gates and "
-                "the workflow is ready for the next agent."
+                "Proposal analysis passed its release gates and the workflow is ready for the next agent."
             ),
             agent_name="proposal-analysis",
         )
-
         return {
             "status": WorkflowStatus.READY_FOR_NEXT_AGENT,
             "next_route": None,
             "human_review_required": False,
             "human_review_reason": None,
             "current_step": state.current_step + 1,
-            "events": [
-                *state.events,
-                event,
-            ],
+            "events": [*state.events, event],
         }
 
     @staticmethod
-    def route_after_proposal_analysis(
-        state: AssessmentWorkflowState,
-    ) -> str:
+    def route_after_orchestration(state: AssessmentWorkflowState) -> str:
+        """Route a valid plan to analysis or failure to review."""
+
+        if (
+            state.orchestrator_execution is None
+            or state.human_review_required
+            or state.next_route is WorkflowRoute.REQUIRE_HUMAN_REVIEW
+        ):
+            return "human_review"
+        return "proposal_analysis"
+
+    @staticmethod
+    def route_after_proposal_analysis(state: AssessmentWorkflowState) -> str:
         """Choose evaluation or human review after agent execution."""
 
         if (
             state.proposal_analysis_execution is None
             or state.human_review_required
-            or state.next_route
-            is WorkflowRoute.REQUIRE_HUMAN_REVIEW
+            or state.next_route is WorkflowRoute.REQUIRE_HUMAN_REVIEW
         ):
             return "human_review"
-
         return "evaluation"
 
     @staticmethod
-    def route_after_evaluation(
-        state: AssessmentWorkflowState,
-    ) -> str:
+    def route_after_evaluation(state: AssessmentWorkflowState) -> str:
         """Choose the next route from evaluation release gates."""
 
-        if state.proposal_analysis_passed:
-            return "next_agent"
-
-        return "human_review"
+        return "next_agent" if state.proposal_analysis_passed else "human_review"
 
     @staticmethod
-    def _build_evaluation_failure_reason(
+    def _validate_orchestration_execution(
         state: AssessmentWorkflowState,
-    ) -> str:
-        """Create a safe human-review reason from evaluation state."""
+        execution: OrchestratorExecution,
+    ) -> None:
+        """Validate identity and mandatory plan tasks."""
 
-        report = state.proposal_analysis_evaluation
+        if execution.plan.assessment_id != state.assessment_id:
+            raise ValueError("Orchestration plan assessment ID does not match workflow state.")
 
-        if report is None:
-            return (
-                "Human review is required because no valid proposal "
-                "analysis evaluation report is available."
+        planned_agents = {task.agent_name for task in execution.plan.tasks}
+        if SpecialistAgentName.PROPOSAL_ANALYSIS not in planned_agents:
+            raise ValueError(
+                "Orchestration plan does not contain the mandatory Proposal Analysis Agent task."
             )
 
+    @staticmethod
+    def _build_evaluation_failure_reason(state: AssessmentWorkflowState) -> str:
+        report = state.proposal_analysis_evaluation
+        if report is None:
+            return "Human review is required because no valid proposal analysis evaluation report is available."
         return (
-            "Human review is required because proposal analysis "
-            f"failed {report.blocking_gate_failure_count} "
-            "blocking evaluation gate(s)."
+            "Human review is required because proposal analysis failed "
+            f"{report.blocking_gate_failure_count} blocking evaluation gate(s)."
         )
 
     @staticmethod
@@ -394,13 +428,7 @@ class AssessmentWorkflowNodes:
         state: AssessmentWorkflowState,
         node_name: str,
     ) -> dict[str, object]:
-        """Create a human-review update after reaching step limits."""
-
-        reason = (
-            "Workflow step limit reached before executing "
-            f"'{node_name}'."
-        )
-
+        reason = f"Workflow step limit reached before executing '{node_name}'."
         event = WorkflowEvent(
             event_type=WorkflowEventType.WORKFLOW_FAILED,
             status=WorkflowStatus.HUMAN_REVIEW_REQUIRED,
@@ -411,20 +439,13 @@ class AssessmentWorkflowNodes:
                 "maximum_steps": state.maximum_steps,
             },
         )
-
         return {
             "status": WorkflowStatus.HUMAN_REVIEW_REQUIRED,
             "next_route": WorkflowRoute.REQUIRE_HUMAN_REVIEW,
             "human_review_required": True,
             "human_review_reason": reason,
-            "errors": [
-                *state.errors,
-                reason,
-            ],
-            "events": [
-                *state.events,
-                event,
-            ],
+            "errors": [*state.errors, reason],
+            "events": [*state.events, event],
         }
 
     @staticmethod
@@ -433,27 +454,18 @@ class AssessmentWorkflowNodes:
         reason: str,
         event_type: WorkflowEventType,
     ) -> dict[str, object]:
-        """Create a normalized human-review state update."""
-
         event = WorkflowEvent(
             event_type=event_type,
             status=WorkflowStatus.HUMAN_REVIEW_REQUIRED,
             message=reason,
             agent_name="proposal-analysis",
         )
-
         return {
             "status": WorkflowStatus.HUMAN_REVIEW_REQUIRED,
             "next_route": WorkflowRoute.REQUIRE_HUMAN_REVIEW,
             "human_review_required": True,
             "human_review_reason": reason,
             "current_step": state.current_step + 1,
-            "errors": [
-                *state.errors,
-                reason,
-            ],
-            "events": [
-                *state.events,
-                event,
-            ],
+            "errors": [*state.errors, reason],
+            "events": [*state.events, event],
         }

@@ -1,5 +1,6 @@
 import pytest
 from pydantic import ValidationError
+from app.agents.orchestrator.schemas import OrchestratorInput
 
 from app.agents.proposal_analysis.schemas import (
     ProposalAnalysisInput,
@@ -27,6 +28,11 @@ def create_state(
         assessment_id="assessment-001",
         proposal_document_id="proposal-001",
         rfp_document_id="rfp-001",
+        orchestrator_input=OrchestratorInput(
+            assessment_id="assessment-001",
+            proposal_document_id="proposal-001",
+            rfp_document_id="rfp-001",
+        ),
         proposal_analysis_input=ProposalAnalysisInput(
             assessment_id="assessment-001",
             proposal_document_id="proposal-001",
