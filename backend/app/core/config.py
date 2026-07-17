@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     llm_model: str = ""
     gemini_api_key: str = Field(default="", repr=False)
 
+    embedding_provider: str = "sentence-transformers"
+    embedding_model: str = (
+        "sentence-transformers/all-MiniLM-L6-v2"
+    )
+    normalize_embeddings: bool = True
+
     max_agent_steps: int = Field(default=12, ge=1, le=50)
     max_agent_retries: int = Field(default=2, ge=0, le=5)
     max_llm_calls_per_assessment: int = Field(default=20, ge=1, le=100)
