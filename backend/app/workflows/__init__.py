@@ -5,6 +5,7 @@ from app.workflows.nodes import (
     AssessmentWorkflowNodes,
     OrchestratorAgentProtocol,
     ProposalAnalysisAgentProtocol,
+    RiskReportAgentProtocol,
     VendorResearchAgentProtocol,
 )
 from app.workflows.state import (
@@ -29,4 +30,5 @@ __all__ = [
     "WorkflowStatus",
     "create_assessment_graph",
     "VendorResearchAgentProtocol",
+    "RiskReportAgentProtocol",
 ]

@@ -23,7 +23,10 @@ from app.agents.vendor_research.schemas import (
     VendorResearchExecution,
     VendorResearchInput,
 )
-
+from app.agents.risk_report.schemas import (
+    RiskReportExecution,
+    RiskReportInput,
+)
 
 class OrchestratorAgentProtocol(Protocol):
     """Minimum Orchestrator Agent interface required by workflow."""
@@ -55,6 +58,16 @@ class VendorResearchAgentProtocol(Protocol):
         """Run approved-source vendor research."""
 
 
+class RiskReportAgentProtocol(Protocol):
+    """Minimum Risk and Report Agent interface for workflow."""
+
+    async def generate_report(
+        self,
+        risk_input: RiskReportInput,
+    ) -> RiskReportExecution:
+        """Generate a validated decision-support report."""
+
+
 class AssessmentWorkflowNodes:
     """Nodes used by the controlled assessment workflow."""
 
@@ -63,14 +76,34 @@ class AssessmentWorkflowNodes:
         orchestrator_agent: OrchestratorAgentProtocol,
         proposal_analysis_agent: ProposalAnalysisAgentProtocol,
         proposal_evaluation_runner: AgentEvaluationRunner,
-        vendor_research_agent: (VendorResearchAgentProtocol | None) = None,
-        vendor_evaluation_runner: (AgentEvaluationRunner | None) = None,
+        vendor_research_agent: (
+            VendorResearchAgentProtocol | None
+        ) = None,
+        vendor_evaluation_runner: (
+            AgentEvaluationRunner | None
+        ) = None,
+        risk_report_agent: (
+            RiskReportAgentProtocol | None
+        ) = None,
+        risk_report_evaluation_runner: (
+            AgentEvaluationRunner | None
+        ) = None,
     ) -> None:
         self._orchestrator_agent = orchestrator_agent
-        self._proposal_analysis_agent = proposal_analysis_agent
-        self._proposal_evaluation_runner = proposal_evaluation_runner
+        self._proposal_analysis_agent = (
+            proposal_analysis_agent
+        )
+        self._proposal_evaluation_runner = (
+            proposal_evaluation_runner
+        )
         self._vendor_research_agent = vendor_research_agent
-        self._vendor_evaluation_runner = vendor_evaluation_runner
+        self._vendor_evaluation_runner = (
+            vendor_evaluation_runner
+        )
+        self._risk_report_agent = risk_report_agent
+        self._risk_report_evaluation_runner = (
+            risk_report_evaluation_runner
+        )
 
     def initialize_workflow(
         self,
@@ -179,6 +212,252 @@ class AssessmentWorkflowNodes:
             "completed_agents": [*state.completed_agents, "orchestrator"],
             "events": [*state.events, started_event, completed_event],
         }
+async def run_risk_report(
+    self,
+    state: AssessmentWorkflowState,
+) -> dict[str, object]:
+    """Execute the Risk and Report Agent."""
+
+    if state.step_limit_reached:
+        return self._create_step_limit_failure(
+            state=state,
+            node_name="run_risk_report",
+        )
+
+    if self._risk_report_agent is None:
+        return self._create_human_review_update(
+            state=state,
+            reason=(
+                "Risk reporting is planned, but no Risk and Report Agent "
+                "is configured."
+            ),
+            event_type=WorkflowEventType.WORKFLOW_FAILED,
+        )
+
+    if state.risk_report_input is None:
+        return self._create_human_review_update(
+            state=state,
+            reason=(
+                "Risk reporting is planned, but no Risk and Report input "
+                "is available."
+            ),
+            event_type=WorkflowEventType.WORKFLOW_FAILED,
+        )
+
+    started_event = WorkflowEvent(
+        event_type=WorkflowEventType.AGENT_STARTED,
+        status=WorkflowStatus.RISK_REPORT_RUNNING,
+        message="Risk and Report Agent execution started.",
+        agent_name="risk-report",
+    )
+
+    try:
+        execution = await self._risk_report_agent.generate_report(
+            state.risk_report_input,
+        )
+    except Exception as error:
+        error_message = (
+            "Risk and Report Agent execution failed: "
+            f"{type(error).__name__}."
+        )
+        failure_event = WorkflowEvent(
+            event_type=WorkflowEventType.WORKFLOW_FAILED,
+            status=WorkflowStatus.HUMAN_REVIEW_REQUIRED,
+            message=error_message,
+            agent_name="risk-report",
+            metadata={"error_type": type(error).__name__},
+        )
+        return {
+            "status": WorkflowStatus.HUMAN_REVIEW_REQUIRED,
+            "next_route": WorkflowRoute.REQUIRE_HUMAN_REVIEW,
+            "human_review_required": True,
+            "human_review_reason": error_message,
+            "current_step": state.current_step + 1,
+            "errors": [*state.errors, error_message],
+            "agent_execution_records": [
+                *state.agent_execution_records,
+                AgentExecutionRecord(
+                    agent_name="risk-report",
+                    succeeded=False,
+                    tool_call_count=0,
+                    execution_time_ms=0.0,
+                    instruction_version="unknown",
+                    error_message=error_message,
+                ),
+            ],
+            "events": [*state.events, started_event, failure_event],
+        }
+
+    completed_event = WorkflowEvent(
+        event_type=WorkflowEventType.AGENT_COMPLETED,
+        status=WorkflowStatus.RISK_REPORT_COMPLETED,
+        message="Risk and Report Agent execution completed.",
+        agent_name="risk-report",
+        metadata={"risk_count": len(execution.result.risks)},
+    )
+
+    return {
+        "status": WorkflowStatus.RISK_REPORT_EVALUATION_PENDING,
+        "next_route": WorkflowRoute.RUN_RISK_REPORT_EVALUATION,
+        "risk_report_execution": execution,
+        "current_step": state.current_step + 1,
+        "agent_execution_records": [
+            *state.agent_execution_records,
+            AgentExecutionRecord(
+                agent_name="risk-report",
+                succeeded=True,
+                tool_call_count=0,
+                execution_time_ms=execution.total_execution_time_ms,
+                instruction_version=execution.instruction_version,
+            ),
+        ],
+        "completed_agents": [*state.completed_agents, "risk-report"],
+        "events": [*state.events, started_event, completed_event],
+    }
+
+
+def evaluate_risk_report(
+    self,
+    state: AssessmentWorkflowState,
+) -> dict[str, object]:
+    """Evaluate the Risk and Report Agent execution."""
+
+    if state.step_limit_reached:
+        return self._create_step_limit_failure(
+            state=state,
+            node_name="evaluate_risk_report",
+        )
+
+    execution = state.risk_report_execution
+    if execution is None:
+        return self._create_human_review_update(
+            state=state,
+            reason=(
+                "Risk and Report evaluation cannot run because the "
+                "execution is unavailable."
+            ),
+            event_type=WorkflowEventType.WORKFLOW_FAILED,
+        )
+
+    if self._risk_report_evaluation_runner is None:
+        return self._create_human_review_update(
+            state=state,
+            reason=(
+                "Risk and Report execution is available, but no "
+                "evaluation runner is configured."
+            ),
+            event_type=WorkflowEventType.WORKFLOW_FAILED,
+        )
+
+    started_event = WorkflowEvent(
+        event_type=WorkflowEventType.EVALUATION_STARTED,
+        status=WorkflowStatus.RISK_REPORT_EVALUATION_RUNNING,
+        message="Risk and Report evaluation started.",
+        agent_name="risk-report",
+    )
+
+    try:
+        report = self._risk_report_evaluation_runner.run(
+            target=execution,
+            assessment_id=state.assessment_id,
+            agent_instruction_version=execution.instruction_version,
+        )
+    except Exception as error:
+        reason = f"Risk and Report evaluation failed: {type(error).__name__}."
+        update = self._create_human_review_update(
+            state=state,
+            reason=reason,
+            event_type=WorkflowEventType.WORKFLOW_FAILED,
+        )
+        update["events"] = [
+            *state.events,
+            started_event,
+            *update["events"][len(state.events):],
+        ]
+        return update
+
+    completed_event = WorkflowEvent(
+        event_type=WorkflowEventType.EVALUATION_COMPLETED,
+        status=WorkflowStatus.RISK_REPORT_EVALUATION_COMPLETED,
+        message="Risk and Report evaluation completed.",
+        agent_name="risk-report",
+        metadata={
+            "evaluation_id": report.evaluation_id,
+            "overall_score": report.overall_score,
+            "release_approved": report.release_approved,
+        },
+    )
+
+    return {
+        "status": WorkflowStatus.RISK_REPORT_EVALUATION_COMPLETED,
+        "next_route": (
+            WorkflowRoute.COMPLETE
+            if report.release_approved
+            else WorkflowRoute.REQUIRE_HUMAN_REVIEW
+        ),
+        "risk_report_evaluation": report,
+        "current_step": state.current_step + 1,
+        "evaluation_records": [
+            *state.evaluation_records,
+            EvaluationRecord(
+                agent_name="risk-report",
+                evaluation_id=report.evaluation_id,
+                overall_score=report.overall_score,
+                release_approved=report.release_approved,
+                blocking_gate_failure_count=(
+                    report.blocking_gate_failure_count
+                ),
+            ),
+        ],
+        "events": [*state.events, started_event, completed_event],
+    }
+
+
+def route_after_risk_report(state: AssessmentWorkflowState) -> str:
+    """Route after Risk and Report execution."""
+
+    if (
+        state.risk_report_execution is None
+        or state.human_review_required
+        or state.next_route is WorkflowRoute.REQUIRE_HUMAN_REVIEW
+    ):
+        return "human_review"
+    return "risk_report_evaluation"
+
+
+def route_after_risk_report_evaluation(
+    state: AssessmentWorkflowState,
+) -> str:
+    """Route after Risk and Report evaluation."""
+
+    return "complete" if state.risk_report_passed else "human_review"
+
+
+def complete_workflow(
+    self,
+    state: AssessmentWorkflowState,
+) -> dict[str, object]:
+    """Mark the assessment workflow as completed."""
+
+    event = WorkflowEvent(
+        event_type=WorkflowEventType.WORKFLOW_COMPLETED,
+        status=WorkflowStatus.COMPLETED,
+        message=(
+            "All planned specialist agents passed their deterministic "
+            "evaluation gates."
+        ),
+    )
+    return {
+        "status": WorkflowStatus.COMPLETED,
+        "next_route": None,
+        "human_review_required": True,
+        "human_review_reason": (
+            "Automated processing is complete. Final business review "
+            "and decision remain human-owned."
+        ),
+        "current_step": state.current_step + 1,
+        "events": [*state.events, event],
+    }
 
     async def run_proposal_analysis(
         self,
@@ -421,7 +700,10 @@ class AssessmentWorkflowNodes:
         if state.vendor_research_planned:
             return "vendor_research"
 
-        return "next_agent"
+        if state.risk_report_planned:
+            return "risk_report"
+
+        return "complete"
 
     @staticmethod
     def _validate_orchestration_execution(
@@ -731,12 +1013,15 @@ class AssessmentWorkflowNodes:
         return "vendor_evaluation"
 
     @staticmethod
-    def route_after_vendor_evaluation(
+    def route_after_evaluation(
         state: AssessmentWorkflowState,
     ) -> str:
-        """Route from Vendor Research release gates."""
+        """Route after Proposal Analysis evaluation."""
 
-        if state.vendor_research_passed:
-            return "next_agent"
-
-        return "human_review"
+        if not state.proposal_analysis_passed:
+            return "human_review"
+        if state.vendor_research_planned:
+            return "vendor_research"
+        if state.risk_report_planned:
+            return "risk_report"
+        return "complete"

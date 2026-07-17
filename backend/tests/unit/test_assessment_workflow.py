@@ -25,7 +25,14 @@ from tests.workflow_fakes import (
     FakeProposalAnalysisAgent,
     FakeVendorResearchAgent,
 )
-
+from app.agents.risk_report.schemas import RiskReportInput
+from app.evaluation.risk_report import create_risk_report_evaluation_runner
+from tests.workflow_fakes import (
+    FakeProposalAnalysisAgent,
+    FakeRiskReportAgent,
+    FakeVendorResearchAgent,
+    create_fake_proposal_result,
+)
 
 def create_state(
     maximum_steps: int = 12,
@@ -55,6 +62,12 @@ def create_state(
             research_objectives=[
                 "company profile and ownership",
             ],
+        ),
+        risk_report_input=RiskReportInput(
+            assessment_id="assessment-001",
+            proposal_document_id="proposal-001",
+            vendor_name="Example Digital Services",
+            proposal_analysis=create_fake_proposal_result(),
         ),
         maximum_steps=maximum_steps,
     )
@@ -326,6 +339,57 @@ async def test_workflow_respects_step_limit() -> None:
     assert final_state.human_review_reason is not None
 
     assert "step limit" in (final_state.human_review_reason.casefold())
+
+
+
+@pytest.mark.asyncio
+async def test_workflow_executes_risk_report() -> None:
+    risk_agent = FakeRiskReportAgent()
+    result = await create_graph(risk_agent=risk_agent).ainvoke(create_state())
+    final_state = AssessmentWorkflowState.model_validate(result)
+
+    assert final_state.risk_report_execution is not None
+    assert final_state.risk_report_evaluation is not None
+    assert final_state.risk_report_passed is True
+    assert "risk-report" in final_state.completed_agents
+    assert len(risk_agent.received_inputs) == 1
+    assert final_state.status is WorkflowStatus.COMPLETED
+    assert final_state.human_review_required is True
+
+
+@pytest.mark.asyncio
+async def test_workflow_routes_risk_agent_failure_to_review() -> None:
+    result = await create_graph(
+        risk_agent=FakeRiskReportAgent(should_fail=True),
+    ).ainvoke(create_state())
+    final_state = AssessmentWorkflowState.model_validate(result)
+
+    assert final_state.status is WorkflowStatus.HUMAN_REVIEW_REQUIRED
+    assert final_state.human_review_required is True
+    assert final_state.errors
+
+
+@pytest.mark.asyncio
+async def test_workflow_routes_risk_gate_failure_to_review() -> None:
+    result = await create_graph(
+        risk_agent=FakeRiskReportAgent(invalid_source_reference=True),
+    ).ainvoke(create_state())
+    final_state = AssessmentWorkflowState.model_validate(result)
+
+    assert final_state.status is WorkflowStatus.HUMAN_REVIEW_REQUIRED
+    assert final_state.risk_report_evaluation is not None
+    assert final_state.risk_report_evaluation.release_approved is False
+
+
+@pytest.mark.asyncio
+async def test_completed_workflow_preserves_human_authority() -> None:
+    result = await create_graph().ainvoke(create_state())
+    final_state = AssessmentWorkflowState.model_validate(result)
+
+    assert final_state.status is WorkflowStatus.COMPLETED
+    assert final_state.human_review_required is True
+    assert final_state.human_review_reason is not None
+    assert "human" in final_state.human_review_reason.casefold()
 
 
 def test_graph_compiles_successfully() -> None:

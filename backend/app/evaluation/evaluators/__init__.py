@@ -11,11 +11,16 @@ from app.evaluation.evaluators.vendor_citation import (
 from app.evaluation.evaluators.vendor_trajectory import (
     VendorResearchTrajectoryEvaluator,
 )
+from app.evaluation.evaluators.risk_report import (
+    RiskReportEvaluator,
+)
 
 __all__ = [
     "BaseEvaluator",
     "ProposalCitationEvaluator",
     "ProposalTrajectoryEvaluator",
+    "RiskReportEvaluator",
     "VendorResearchCitationEvaluator",
     "VendorResearchTrajectoryEvaluator",
 ]
+

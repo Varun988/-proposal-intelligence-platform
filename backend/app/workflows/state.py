@@ -15,6 +15,10 @@ from app.agents.vendor_research.schemas import (
     VendorResearchExecution,
     VendorResearchInput,
 )
+from app.agents.risk_report.schemas import (
+    RiskReportExecution,
+    RiskReportInput,
+)
 from app.evaluation.schemas import AgentEvaluationReport
 
 
@@ -42,7 +46,18 @@ class WorkflowStatus(StrEnum):
     VENDOR_EVALUATION_PENDING = "vendor_evaluation_pending"
     VENDOR_EVALUATION_RUNNING = "vendor_evaluation_running"
     VENDOR_EVALUATION_COMPLETED = "vendor_evaluation_completed"
-
+    RISK_REPORT_PENDING = "risk_report_pending"
+    RISK_REPORT_RUNNING = "risk_report_running"
+    RISK_REPORT_COMPLETED = "risk_report_completed"
+    RISK_REPORT_EVALUATION_PENDING = (
+        "risk_report_evaluation_pending"
+    )
+    RISK_REPORT_EVALUATION_RUNNING = (
+        "risk_report_evaluation_running"
+    )
+    RISK_REPORT_EVALUATION_COMPLETED = (
+        "risk_report_evaluation_completed"
+    )
 
 class WorkflowRoute(StrEnum):
     """Possible routing decisions made by the workflow."""
@@ -56,7 +71,10 @@ class WorkflowRoute(StrEnum):
     FAIL = "fail"
     RUN_VENDOR_RESEARCH = "run_vendor_research"
     RUN_VENDOR_EVALUATION = "run_vendor_evaluation"
-
+    RUN_RISK_REPORT = "run_risk_report"
+    RUN_RISK_REPORT_EVALUATION = (
+        "run_risk_report_evaluation"
+    )
 
 class WorkflowEventType(StrEnum):
     """Types of auditable workflow events."""
@@ -137,7 +155,9 @@ class AssessmentWorkflowState(BaseModel):
     vendor_research_input: VendorResearchInput | None = None
     vendor_research_execution: VendorResearchExecution | None = None
     vendor_research_evaluation: AgentEvaluationReport | None = None
-
+    risk_report_input: RiskReportInput | None = None
+    risk_report_execution: RiskReportExecution | None = None
+    risk_report_evaluation: AgentEvaluationReport | None = None
     completed_agents: list[str] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
 
@@ -193,7 +213,25 @@ class AssessmentWorkflowState(BaseModel):
                     "Vendor research proposal document ID must "
                     "match the workflow proposal document ID."
                 )
+        if self.risk_report_input is not None:
+            if (
+                self.risk_report_input.assessment_id
+                != self.assessment_id
+            ):
+                raise ValueError(
+                    "Risk report assessment ID must match "
+                    "the workflow assessment ID."
+                )
 
+            if (
+                self.risk_report_input.proposal_document_id
+                != self.proposal_document_id
+            ):
+                raise ValueError(
+                    "Risk report proposal document ID must "
+                    "match the workflow proposal document ID."
+                )
+            
         return self
 
     @property
@@ -233,7 +271,27 @@ class AssessmentWorkflowState(BaseModel):
             task.agent_name.value == "vendor-research"
             for task in self.orchestrator_execution.plan.tasks
         )
+    @property
+    def risk_report_planned(self) -> bool:
+        """Return whether the Orchestrator planned risk reporting."""
 
+        if self.orchestrator_execution is None:
+            return False
+
+        return any(
+            task.agent_name.value == "risk-report"
+            for task in self.orchestrator_execution.plan.tasks
+        )
+
+    @property
+    def risk_report_passed(self) -> bool:
+        """Return whether Risk and Report passed evaluation."""
+
+        return bool(
+            self.risk_report_evaluation
+            and self.risk_report_evaluation.release_approved
+        )
+    
     @property
     def vendor_research_passed(self) -> bool:
         """Return whether Vendor Research passed evaluation."""

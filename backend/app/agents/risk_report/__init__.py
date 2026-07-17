@@ -1,3 +1,4 @@
+from app.agents.risk_report.agent import RiskReportAgent
 from app.agents.risk_report.instructions import (
     RISK_REPORT_INSTRUCTION_VERSION,
     RISK_REPORT_SYSTEM_INSTRUCTIONS,
@@ -47,5 +48,6 @@ __all__ = [
     "RiskReportResult",
     "RiskSeverity",
     "RiskStatus",
+    "RiskReportAgent",
     "SynthesizedRisk",
 ]

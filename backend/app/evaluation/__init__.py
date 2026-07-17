@@ -2,6 +2,7 @@ from app.evaluation.evaluators import (
     BaseEvaluator,
     ProposalCitationEvaluator,
     ProposalTrajectoryEvaluator,
+    RiskReportEvaluator,
     VendorResearchCitationEvaluator,
     VendorResearchTrajectoryEvaluator,
 )
@@ -22,6 +23,9 @@ from app.evaluation.schemas import (
 from app.evaluation.vendor_research import (
     create_vendor_research_evaluation_runner,
 )
+from app.evaluation.risk_report import (
+    create_risk_report_evaluation_runner,
+)
 
 __all__ = [
     "AgentEvaluationReport",
@@ -40,4 +44,6 @@ __all__ = [
     "create_proposal_analysis_evaluation_runner",
     "create_vendor_research_evaluation_runner",
     "evaluate_gate",
+    "RiskReportEvaluator",
+    "create_risk_report_evaluation_runner",
 ]
