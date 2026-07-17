@@ -28,6 +28,13 @@ class DocumentRepositoryProtocol(Protocol):
     ) -> StoredDocumentRecord:
         """Retrieve a document record."""
 
+    async def claim_chunking(
+        self,
+        document_id: str,
+        updated_at: datetime,
+    ) -> StoredDocumentRecord:
+        """Atomically claim an extracted document for chunking."""
+
     async def update(
         self,
         record: StoredDocumentRecord,
@@ -133,6 +140,59 @@ class InMemoryDocumentRepository:
             return stored_record.model_copy(
                 deep=True,
             )
+        
+    async def claim_chunking(
+        self,
+        document_id: str,
+        updated_at: datetime,
+    ) -> StoredDocumentRecord:
+        """Atomically claim an extracted document for chunking."""
+
+        normalized_id = document_id.strip()
+
+        if not normalized_id:
+            raise DocumentNotFoundError(
+                "Document ID cannot be empty."
+            )
+
+        async with self._lock:
+            record = self._records.get(
+                normalized_id,
+            )
+
+            if record is None:
+                raise DocumentNotFoundError(
+                    "Document not found: "
+                    f"{normalized_id}."
+                )
+
+            if (
+                record.lifecycle_status
+                is not DocumentLifecycleStatus.EXTRACTED
+            ):
+                raise DocumentConflictError(
+                    "Document chunking can only be requested "
+                    "for an extracted document."
+                )
+
+            pending_record = record.model_copy(
+                update={
+                    "lifecycle_status": (
+                        DocumentLifecycleStatus
+                        .CHUNKING_PENDING
+                    ),
+                    "error_message": None,
+                    "updated_at": updated_at,
+                },
+                deep=True,
+            )
+
+            self._records[normalized_id] = pending_record
+
+            return pending_record.model_copy(
+                deep=True,
+            )
+                
     async def claim_extraction(
         self,
         document_id: str,

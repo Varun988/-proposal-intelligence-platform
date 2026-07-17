@@ -47,43 +47,71 @@ def create_services() -> tuple[DocumentService, DocumentProcessingService]:
 
 
 @pytest.mark.asyncio
-async def test_processing_extracts_stored_text_document() -> None:
+async def test_processing_extracts_stored_text_document(
+) -> None:
     upload_service, processing_service = create_services()
+
     upload = await upload_service.upload_document(
         original_file_name="proposal.txt",
         declared_media_type="text/plain",
         content=b"Synthetic proposal content.",
-        metadata=DocumentUploadMetadata(purpose=DocumentPurpose.PROPOSAL),
+        metadata=DocumentUploadMetadata(
+            purpose=DocumentPurpose.PROPOSAL,
+        ),
     )
 
-    extracted = await processing_service.extract_document(upload.document_id)
-    status = await upload_service.get_status(upload.document_id)
+    await processing_service.request_extraction(
+        upload.document_id,
+    )
+
+    extracted = await processing_service.extract_document(
+        upload.document_id,
+    )
+
+    status = await upload_service.get_status(
+        upload.document_id,
+    )
 
     assert extracted.document_id == upload.document_id
     assert extracted.file_name == "proposal.txt"
     assert extracted.document_type is DocumentType.TEXT
     assert extracted.page_count == 1
-    assert status.lifecycle_status is DocumentLifecycleStatus.EXTRACTED
+
+    assert (
+        status.lifecycle_status
+        is DocumentLifecycleStatus.EXTRACTED
+    )
     assert status.page_count == 1
     assert status.extracted_character_count == 27
 
-
 @pytest.mark.asyncio
-async def test_processing_persists_extracted_document() -> None:
+async def test_processing_persists_extracted_document(
+) -> None:
     upload_service, processing_service = create_services()
+
     upload = await upload_service.upload_document(
         original_file_name="proposal.txt",
         declared_media_type="text/plain",
         content=b"Synthetic proposal content.",
-        metadata=DocumentUploadMetadata(purpose=DocumentPurpose.PROPOSAL),
+        metadata=DocumentUploadMetadata(
+            purpose=DocumentPurpose.PROPOSAL,
+        ),
     )
 
-    extracted = await processing_service.extract_document(upload.document_id)
-    stored = await processing_service.get_extracted_document(upload.document_id)
+    await processing_service.request_extraction(
+        upload.document_id,
+    )
+
+    extracted = await processing_service.extract_document(
+        upload.document_id,
+    )
+
+    stored = await processing_service.get_extracted_document(
+        upload.document_id,
+    )
 
     assert stored == extracted
     assert stored is not extracted
-
 
 @pytest.mark.asyncio
 async def test_processing_rejects_duplicate_request() -> None:

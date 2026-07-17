@@ -22,6 +22,7 @@ class DocumentLifecycleStatus(StrEnum):
     EXTRACTION_RUNNING = "extraction_running"
     EXTRACTED = "extracted"
     CHUNKING_PENDING = "chunking_pending"
+    CHUNKING_RUNNING = "chunking_running"
     CHUNKED = "chunked"
     INDEXING_PENDING = "indexing_pending"
     INDEXED = "indexed"
