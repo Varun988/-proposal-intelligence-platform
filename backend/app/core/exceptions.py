@@ -100,3 +100,31 @@ class RerankingConfigurationError(RetrievalError):
 
 class RetrievalConfigurationError(RetrievalError):
     """Raised when retrieval-pipeline configuration is invalid."""
+
+
+class ToolError(ApplicationError):
+    """Base exception for tool-related failures."""
+
+
+class ToolConfigurationError(ToolError):
+    """Raised when a tool is incorrectly configured."""
+
+
+class ToolRegistrationError(ToolError):
+    """Raised when tool registration is invalid."""
+
+
+class ToolNotFoundError(ToolError):
+    """Raised when a requested tool is not registered."""
+
+
+class ToolPermissionError(ToolError):
+    """Raised when an agent is not permitted to use a tool."""
+
+
+class ToolInputValidationError(ToolError):
+    """Raised when tool input does not match its schema."""
+
+
+class ToolExecutionError(ToolError):
+    """Raised when a tool fails during execution."""
