@@ -1,0 +1,48 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node
+node_modules/
+.next/
+out/
+npm-debug.log*
+
+# Application data
+data/uploads/*
+!data/uploads/.gitkeep
+
+data/indexes/*
+!data/indexes/.gitkeep
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated reports and traces
+reports/
+traces/
+logs/
+
+# IDE and OS
+.DS_Store
+.vscode/settings.json
+
+# Test coverage
+.coverage
+htmlcov/
+coverage.xml
