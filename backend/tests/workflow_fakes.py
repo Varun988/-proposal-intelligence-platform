@@ -275,12 +275,35 @@ class FakeRiskReportAgent:
         self.should_fail = should_fail
         self.invalid_source_reference = invalid_source_reference
         self.received_inputs: list[RiskReportInput] = []
+        self.received_proposal_finding_ids: list[
+            list[str]
+        ] = []
+        self.received_vendor_finding_ids: list[
+            list[str]
+        ] = []
 
     async def generate_report(
         self,
         risk_input: RiskReportInput,
     ) -> RiskReportExecution:
         self.received_inputs.append(risk_input)
+        self.received_proposal_finding_ids.append(
+            [
+                finding.finding_id
+                for finding
+                in risk_input.proposal_analysis.findings
+            ]
+        )
+
+        self.received_vendor_finding_ids.append(
+            [
+                finding.finding_id
+                for finding
+                in risk_input.vendor_research.findings
+            ]
+            if risk_input.vendor_research is not None
+            else []
+        )
         if self.should_fail:
             raise RuntimeError("Synthetic Risk and Report Agent failure.")
 

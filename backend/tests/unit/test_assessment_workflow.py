@@ -423,8 +423,134 @@ async def test_completed_workflow_preserves_human_authority() -> None:
     assert final_state.human_review_reason is not None
     assert "human" in final_state.human_review_reason.casefold()
 
+@pytest.mark.asyncio
+async def test_risk_report_receives_actual_proposal_output() -> None:
+    risk_agent = FakeRiskReportAgent()
+
+    result = await create_graph(
+        risk_agent=risk_agent,
+    ).ainvoke(
+        create_state(),
+    )
+
+    final_state = AssessmentWorkflowState.model_validate(
+        result,
+    )
+
+    assert final_state.status is WorkflowStatus.COMPLETED
+    assert len(risk_agent.received_inputs) == 1
+
+    received_input = risk_agent.received_inputs[0]
+    proposal_execution = (
+        final_state.proposal_analysis_execution
+    )
+
+    assert proposal_execution is not None
+
+    assert received_input.proposal_analysis == (
+        proposal_execution.result
+    )
+
+    assert risk_agent.received_proposal_finding_ids == [
+        [
+            finding.finding_id
+            for finding
+            in proposal_execution.result.findings
+        ]
+    ]
+
+
+@pytest.mark.asyncio
+async def test_risk_report_receives_actual_vendor_output() -> None:
+    risk_agent = FakeRiskReportAgent()
+
+    result = await create_graph(
+        risk_agent=risk_agent,
+    ).ainvoke(
+        create_state(),
+    )
+
+    final_state = AssessmentWorkflowState.model_validate(
+        result,
+    )
+
+    vendor_execution = (
+        final_state.vendor_research_execution
+    )
+
+    assert vendor_execution is not None
+    assert len(risk_agent.received_inputs) == 1
+
+    received_input = risk_agent.received_inputs[0]
+
+    assert received_input.vendor_research == (
+        vendor_execution.result
+    )
+
+    assert risk_agent.received_vendor_finding_ids == [
+        [
+            finding.finding_id
+            for finding
+            in vendor_execution.result.findings
+        ]
+    ]
+
+
+@pytest.mark.asyncio
+async def test_risk_report_omits_unplanned_vendor_output() -> None:
+    risk_agent = FakeRiskReportAgent()
+
+    result = await create_graph(
+        risk_agent=risk_agent,
+    ).ainvoke(
+        create_state(
+            vendor_research_required=False,
+        ),
+    )
+
+    final_state = AssessmentWorkflowState.model_validate(
+        result,
+    )
+
+    assert final_state.status is WorkflowStatus.COMPLETED
+    assert final_state.vendor_research_execution is None
+    assert len(risk_agent.received_inputs) == 1
+
+    received_input = risk_agent.received_inputs[0]
+
+    assert received_input.vendor_research is None
+    assert risk_agent.received_vendor_finding_ids == [[]]
+
+
+@pytest.mark.asyncio
+async def test_workflow_records_risk_input_preparation() -> None:
+    result = await create_graph().ainvoke(
+        create_state(),
+    )
+
+    final_state = AssessmentWorkflowState.model_validate(
+        result,
+    )
+
+    preparation_events = [
+        event
+        for event in final_state.events
+        if (
+            event.agent_name == "risk-report"
+            and "input was prepared" in event.message
+        )
+    ]
+
+    assert len(preparation_events) == 1
+    assert preparation_events[0].metadata[
+        "proposal_finding_count"
+    ] >= 1
+    assert preparation_events[0].metadata[
+        "vendor_finding_count"
+    ] >= 1
 
 def test_graph_compiles_successfully() -> None:
     graph = create_graph()
 
     assert graph is not None
+

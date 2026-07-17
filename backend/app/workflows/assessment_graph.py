@@ -42,6 +42,10 @@ def create_assessment_graph(
     graph.add_node("evaluate_proposal_analysis", nodes.evaluate_proposal_analysis)
     graph.add_node("run_vendor_research", nodes.run_vendor_research)
     graph.add_node("evaluate_vendor_research", nodes.evaluate_vendor_research)
+    graph.add_node(
+        "prepare_risk_report_input",
+        nodes.prepare_risk_report_input,
+    )
     graph.add_node("run_risk_report", nodes.run_risk_report)
     graph.add_node("evaluate_risk_report", nodes.evaluate_risk_report)
     graph.add_node("request_human_review", nodes.request_human_review)
@@ -73,7 +77,7 @@ def create_assessment_graph(
         nodes.route_after_evaluation,
         {
             "vendor_research": "run_vendor_research",
-            "risk_report": "run_risk_report",
+            "risk_report": "prepare_risk_report_input",
             "complete": "complete_workflow",
             "human_review": "request_human_review",
         },
@@ -92,8 +96,17 @@ def create_assessment_graph(
         "evaluate_vendor_research",
         nodes.route_after_vendor_evaluation,
         {
-            "risk_report": "run_risk_report",
+            "risk_report": "prepare_risk_report_input",
             "complete": "complete_workflow",
+            "human_review": "request_human_review",
+        },
+    )
+
+    graph.add_conditional_edges(
+        "prepare_risk_report_input",
+        nodes.route_after_risk_input_preparation,
+        {
+            "risk_report": "run_risk_report",
             "human_review": "request_human_review",
         },
     )

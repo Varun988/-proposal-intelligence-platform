@@ -532,6 +532,120 @@ class AssessmentWorkflowNodes:
             "events": [*state.events, started_event, completed_event],
         }
 
+    def prepare_risk_report_input(
+        self,
+        state: AssessmentWorkflowState,
+    ) -> dict[str, object]:
+        """Build Risk and Report input from validated agent results."""
+
+        if state.step_limit_reached:
+            return self._create_step_limit_failure(
+                state=state,
+                node_name="prepare_risk_report_input",
+            )
+
+        proposal_execution = (
+            state.proposal_analysis_execution
+        )
+
+        if (
+            proposal_execution is None
+            or not state.proposal_analysis_passed
+        ):
+            return self._create_human_review_update(
+                state=state,
+                reason=(
+                    "Risk report input cannot be prepared because "
+                    "validated Proposal Analysis output is unavailable."
+                ),
+                event_type=WorkflowEventType.WORKFLOW_FAILED,
+                agent_name="risk-report",
+            )
+
+        vendor_result = None
+
+        if state.vendor_research_planned:
+            if (
+                state.vendor_research_execution is None
+                or not state.vendor_research_passed
+            ):
+                return self._create_human_review_update(
+                    state=state,
+                    reason=(
+                        "Risk report input cannot be prepared because "
+                        "validated Vendor Research output is unavailable."
+                    ),
+                    event_type=WorkflowEventType.WORKFLOW_FAILED,
+                    agent_name="risk-report",
+                )
+
+            vendor_result = (
+                state.vendor_research_execution.result
+            )
+
+        existing_input = state.risk_report_input
+
+        if existing_input is None:
+            return self._create_human_review_update(
+                state=state,
+                reason=(
+                    "Risk reporting is planned, but the vendor "
+                    "identity and report configuration are unavailable."
+                ),
+                event_type=WorkflowEventType.WORKFLOW_FAILED,
+                agent_name="risk-report",
+            )
+
+        prepared_input = RiskReportInput(
+            assessment_id=state.assessment_id,
+            proposal_document_id=state.proposal_document_id,
+            vendor_name=existing_input.vendor_name,
+            proposal_analysis=proposal_execution.result,
+            vendor_research=vendor_result,
+            deterministic_scores=[
+                score.model_copy(deep=True)
+                for score in existing_input.deterministic_scores
+            ],
+            report_objectives=[
+                *existing_input.report_objectives,
+            ],
+            human_review_required=True,
+        )
+
+        event = WorkflowEvent(
+            event_type=WorkflowEventType.STATUS_CHANGED,
+            status=WorkflowStatus.RISK_REPORT_PENDING,
+            message=(
+                "Risk and Report input was prepared from validated "
+                "specialist-agent outputs."
+            ),
+            agent_name="risk-report",
+            metadata={
+                "proposal_finding_count": len(
+                    prepared_input.proposal_analysis.findings
+                ),
+                "vendor_finding_count": (
+                    len(prepared_input.vendor_research.findings)
+                    if prepared_input.vendor_research is not None
+                    else 0
+                ),
+                "deterministic_score_count": len(
+                    prepared_input.deterministic_scores
+                ),
+            },
+        )
+
+        return {
+            "status": WorkflowStatus.RISK_REPORT_PENDING,
+            "next_route": WorkflowRoute.RUN_RISK_REPORT,
+            "risk_report_input": prepared_input,
+            "current_step": state.current_step + 1,
+            "events": [
+                *state.events,
+                event,
+            ],
+        }
+
     async def run_risk_report(
         self,
         state: AssessmentWorkflowState,
@@ -1001,3 +1115,19 @@ class AssessmentWorkflowNodes:
             *update["events"][len(state.events):],
         ]
         return update
+
+    @staticmethod
+    def route_after_risk_input_preparation(
+        state: AssessmentWorkflowState,
+    ) -> str:
+        """Route prepared Risk and Report input to execution."""
+
+        if (
+            state.risk_report_input is None
+            or state.human_review_required
+            or state.next_route
+            is WorkflowRoute.REQUIRE_HUMAN_REVIEW
+        ):
+            return "human_review"
+
+        return "risk_report"
