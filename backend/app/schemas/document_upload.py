@@ -129,6 +129,14 @@ class DocumentUploadResponse(BaseModel):
 
     created_at: datetime
 
+class DocumentProcessResponse(BaseModel):
+    """Response returned after accepting document processing."""
+
+    document_id: str = Field(min_length=1)
+    lifecycle_status: DocumentLifecycleStatus
+    processing_accepted: bool
+    message: str = Field(min_length=1)
+
 
 class DocumentStatusResponse(BaseModel):
     """Public processing status for one uploaded document."""

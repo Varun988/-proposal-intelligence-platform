@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     File,
     Form,
@@ -11,13 +12,18 @@ from fastapi import (
 )
 from pydantic import ValidationError
 
-from app.api.dependencies import get_document_service
+from app.api.dependencies import (
+    get_document_processing_service,
+    get_document_service,
+)
 from app.core.exceptions import (
+    DocumentConflictError,
     DocumentNotFoundError,
     DocumentStorageError,
     DocumentValidationError,
 )
 from app.schemas.document_upload import (
+    DocumentProcessResponse,
     DocumentPurpose,
     DocumentStatusResponse,
     DocumentUploadMetadata,
@@ -27,6 +33,14 @@ from app.services.document_service import DocumentService
 from app.services.document_validation_service import (
     MAXIMUM_DOCUMENT_SIZE_BYTES,
 )
+from app.services.document_processing_service import (
+    DocumentProcessingService,
+)
+
+DocumentProcessingServiceDependency = Annotated[
+    DocumentProcessingService,
+    Depends(get_document_processing_service),
+]
 
 router = APIRouter(
     prefix="/documents",
@@ -138,6 +152,68 @@ async def upload_document(
 
     finally:
         await file.close()
+
+
+@router.post(
+    "/{document_id}/process",
+    response_model=DocumentProcessResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "description": "Document not found.",
+        },
+        status.HTTP_409_CONFLICT: {
+            "description": (
+                "The document cannot be processed from "
+                "its current lifecycle state."
+            ),
+        },
+    },
+)
+async def process_document(
+    document_id: str,
+    background_tasks: BackgroundTasks,
+    processing_service: (
+        DocumentProcessingServiceDependency
+    ),
+) -> DocumentProcessResponse:
+    """Queue one stored document for extraction."""
+
+    try:
+        response = (
+            await processing_service.request_extraction(
+                document_id,
+            )
+        )
+    except DocumentNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error_code": "document_not_found",
+                "message": str(error),
+                "document_id": document_id,
+                "details": {},
+            },
+        ) from error
+    except DocumentConflictError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error_code": (
+                    "document_processing_conflict"
+                ),
+                "message": str(error),
+                "document_id": document_id,
+                "details": {},
+            },
+        ) from error
+
+    background_tasks.add_task(
+        processing_service.extract_document,
+        document_id,
+    )
+
+    return response
 
 
 @router.get(

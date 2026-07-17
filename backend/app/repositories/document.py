@@ -1,6 +1,6 @@
 import asyncio
 from typing import Protocol
-
+from datetime import datetime
 from app.core.exceptions import (
     DocumentConflictError,
     DocumentNotFoundError,
@@ -8,7 +8,10 @@ from app.core.exceptions import (
 from app.schemas.document_upload import (
     StoredDocumentRecord,
 )
-
+from app.schemas.document_upload import (
+    DocumentLifecycleStatus,
+    StoredDocumentRecord,
+)
 
 class DocumentRepositoryProtocol(Protocol):
     """Persistence contract for document metadata."""
@@ -36,7 +39,12 @@ class DocumentRepositoryProtocol(Protocol):
         document_id: str,
     ) -> bool:
         """Return whether a document exists."""
-
+    async def claim_extraction(
+        self,
+        document_id: str,
+        updated_at: datetime,
+    ) -> StoredDocumentRecord:
+        """Atomically claim a stored document for extraction."""
 
 class InMemoryDocumentRepository:
     """Concurrency-safe in-memory document repository."""
@@ -125,7 +133,58 @@ class InMemoryDocumentRepository:
             return stored_record.model_copy(
                 deep=True,
             )
+    async def claim_extraction(
+        self,
+        document_id: str,
+        updated_at: datetime,
+    ) -> StoredDocumentRecord:
+        """Atomically claim a stored document for extraction."""
 
+        normalized_id = document_id.strip()
+
+        if not normalized_id:
+            raise DocumentNotFoundError(
+                "Document ID cannot be empty."
+            )
+
+        async with self._lock:
+            record = self._records.get(
+                normalized_id,
+            )
+
+            if record is None:
+                raise DocumentNotFoundError(
+                    "Document not found: "
+                    f"{normalized_id}."
+                )
+
+            if (
+                record.lifecycle_status
+                is not DocumentLifecycleStatus.STORED
+            ):
+                raise DocumentConflictError(
+                    "Document extraction can only be requested "
+                    "for a stored document."
+                )
+
+            pending_record = record.model_copy(
+                update={
+                    "lifecycle_status": (
+                        DocumentLifecycleStatus
+                        .EXTRACTION_PENDING
+                    ),
+                    "error_message": None,
+                    "updated_at": updated_at,
+                },
+                deep=True,
+            )
+
+            self._records[normalized_id] = pending_record
+
+            return pending_record.model_copy(
+                deep=True,
+            )
+        
     async def exists(
         self,
         document_id: str,

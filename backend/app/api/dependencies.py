@@ -17,6 +17,21 @@ from app.services.document_validation_service import (
 from app.storage.document_storage import (
     InMemoryDocumentStorage,
 )
+from app.documents.parsers import (
+    PypdfPDFParser,
+    Utf8TextDocumentParser,
+)
+from app.documents.registry import DocumentParserRegistry
+from app.repositories.extracted_document import (
+    InMemoryExtractedDocumentRepository,
+)
+from app.services.document_extraction_service import (
+    DocumentExtractionService,
+)
+from app.services.document_processing_service import (
+    DocumentProcessingService,
+)
+
 
 @lru_cache
 def get_assessment_repository() -> InMemoryAssessmentRepository:
@@ -82,5 +97,56 @@ def get_document_service() -> DocumentService:
         storage=get_document_storage(),
         validation_service=(
             get_document_validation_service()
+        ),
+    )
+
+@lru_cache
+def get_extracted_document_repository(
+) -> InMemoryExtractedDocumentRepository:
+    """Return the extracted-document repository."""
+
+    return InMemoryExtractedDocumentRepository()
+
+
+@lru_cache
+def get_document_parser_registry(
+) -> DocumentParserRegistry:
+    """Return the configured document parser registry."""
+
+    registry = DocumentParserRegistry()
+
+    registry.register(
+        PypdfPDFParser(),
+    )
+    registry.register(
+        Utf8TextDocumentParser(),
+    )
+
+    return registry
+
+
+@lru_cache
+def get_document_extraction_service(
+) -> DocumentExtractionService:
+    """Return the path-based extraction service."""
+
+    return DocumentExtractionService(
+        registry=get_document_parser_registry(),
+    )
+
+
+@lru_cache
+def get_document_processing_service(
+) -> DocumentProcessingService:
+    """Return the document processing service."""
+
+    return DocumentProcessingService(
+        document_repository=get_document_repository(),
+        extracted_document_repository=(
+            get_extracted_document_repository()
+        ),
+        storage=get_document_storage(),
+        extraction_service=(
+            get_document_extraction_service()
         ),
     )

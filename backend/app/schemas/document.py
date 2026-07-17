@@ -8,6 +8,7 @@ class DocumentType(StrEnum):
     """Document types currently supported by the platform."""
 
     PDF = "pdf"
+    TEXT = "text"
 
 
 class DocumentMetadata(BaseModel):
@@ -56,9 +57,7 @@ class ExtractedDocument(BaseModel):
     page_count: int = Field(ge=1)
     pages: list[DocumentPage] = Field(min_length=1)
 
-    metadata: DocumentMetadata = Field(
-        default_factory=DocumentMetadata,
-    )
+    metadata: DocumentMetadata = Field(default_factory=DocumentMetadata)
 
     @computed_field
     @property

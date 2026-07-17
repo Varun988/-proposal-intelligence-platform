@@ -110,6 +110,9 @@ class DocumentService:
             error_message=record.error_message,
             created_at=record.created_at,
             updated_at=record.updated_at,
+            extracted_character_count=(
+            record.extracted_character_count
+        ),
         )
 
     async def read_content(
