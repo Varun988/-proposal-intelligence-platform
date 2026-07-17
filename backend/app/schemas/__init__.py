@@ -1,3 +1,9 @@
+from app.schemas.document import (
+    DocumentMetadata,
+    DocumentPage,
+    DocumentType,
+    ExtractedDocument,
+)
 from app.schemas.health import HealthResponse
 from app.schemas.llm import (
     LLMMessage,
@@ -8,6 +14,10 @@ from app.schemas.llm import (
 )
 
 __all__ = [
+    "DocumentMetadata",
+    "DocumentPage",
+    "DocumentType",
+    "ExtractedDocument",
     "HealthResponse",
     "LLMMessage",
     "LLMRequest",
