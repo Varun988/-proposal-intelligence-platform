@@ -96,3 +96,7 @@ class DeduplicationConfigurationError(RetrievalError):
 
 class RerankingConfigurationError(RetrievalError):
     """Raised when reranking configuration is invalid."""
+
+
+class RetrievalConfigurationError(RetrievalError):
+    """Raised when retrieval-pipeline configuration is invalid."""

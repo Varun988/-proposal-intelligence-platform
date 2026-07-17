@@ -79,3 +79,34 @@ class RerankingResult(BaseModel):
         """Return the number of reranked candidates."""
 
         return len(self.candidates)
+
+
+class RetrievalMetrics(BaseModel):
+    """Execution metrics captured for one retrieval pipeline run."""
+
+    initial_candidate_count: int = Field(ge=0)
+    deduplicated_candidate_count: int = Field(ge=0)
+    duplicate_count: int = Field(ge=0)
+    reranked_candidate_count: int = Field(ge=0)
+    final_result_count: int = Field(ge=0)
+
+    embedding_latency_ms: float = Field(ge=0)
+    vector_search_latency_ms: float = Field(ge=0)
+    deduplication_latency_ms: float = Field(ge=0)
+    reranking_latency_ms: float = Field(ge=0)
+    total_latency_ms: float = Field(ge=0)
+
+
+class RetrievalResponse(BaseModel):
+    """Final evidence and metrics returned by the retrieval pipeline."""
+
+    query: str
+    candidates: list[RetrievalCandidate]
+    metrics: RetrievalMetrics
+
+    @computed_field
+    @property
+    def result_count(self) -> int:
+        """Return the number of final retrieval candidates."""
+
+        return len(self.candidates)

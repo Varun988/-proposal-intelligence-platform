@@ -70,10 +70,8 @@ class LexicalRetrievalReranker(BaseRetrievalReranker):
         reranked_candidates: list[RetrievalCandidate] = []
 
         for candidate in candidates:
-            normalized_retrieval_score = (
-                self._normalize_retrieval_score(
-                    candidate.retrieval_score,
-                )
+            normalized_retrieval_score = self._normalize_retrieval_score(
+                candidate.retrieval_score,
             )
 
             lexical_score = self._calculate_lexical_score(
