@@ -15,6 +15,7 @@ from app.agents.proposal_analysis.policies import (
 )
 from app.agents.proposal_analysis.schemas import (
     AgentToolCallTrace,
+    EvidenceReference,
     ProposalAnalysisExecution,
     ProposalAnalysisInput,
     ProposalAnalysisResult,
@@ -147,6 +148,10 @@ class ProposalAnalysisAgent:
             analysis_input=analysis_input,
         )
 
+        evidence_inventory = self._build_evidence_inventory(
+            retrieved_evidence,
+        )
+
         return ProposalAnalysisExecution(
             result=result,
             tool_calls=tool_traces,
@@ -154,6 +159,7 @@ class ProposalAnalysisAgent:
             llm_provider=llm_response.provider,
             llm_model=llm_response.model,
             instruction_version=self.instruction_version,
+            retrieved_evidence=evidence_inventory,
             total_execution_time_ms=self._elapsed_ms(
                 started_at,
             ),
@@ -301,6 +307,63 @@ class ProposalAnalysisAgent:
             )
 
         return result
+
+    @staticmethod
+    def _build_evidence_inventory(
+        retrieved_candidates: list[dict[str, Any]],
+    ) -> list:
+        """Create a unique evidence inventory from retrieved candidates."""
+
+        evidence_by_chunk_id: dict[str, EvidenceReference] = {}
+
+        for candidate in retrieved_candidates:
+            chunk = candidate.get("chunk")
+
+            if not isinstance(chunk, dict):
+                continue
+
+            citation = chunk.get("citation")
+
+            if not isinstance(citation, dict):
+                continue
+
+            chunk_id = chunk.get("chunk_id")
+            document_id = chunk.get("document_id")
+            file_name = citation.get("file_name")
+            page_number = citation.get("page_number")
+            supporting_text = chunk.get("text")
+            citation_label = candidate.get(
+                "citation_label",
+            )
+
+            if not all(
+                [
+                    isinstance(chunk_id, str),
+                    isinstance(document_id, str),
+                    isinstance(file_name, str),
+                    isinstance(page_number, int),
+                    isinstance(supporting_text, str),
+                    isinstance(citation_label, str),
+                ]
+            ):
+                continue
+
+            evidence_by_chunk_id[chunk_id] = EvidenceReference(
+                chunk_id=chunk_id,
+                document_id=document_id,
+                file_name=file_name,
+                page_number=page_number,
+                citation_label=citation_label,
+                supporting_text=supporting_text,
+                retrieval_score=candidate.get(
+                    "retrieval_score",
+                ),
+                final_score=candidate.get(
+                    "final_score",
+                ),
+            )
+
+        return list(evidence_by_chunk_id.values())
 
     @staticmethod
     def _elapsed_ms(

@@ -1,5 +1,8 @@
-from app.evaluation.evaluators import BaseEvaluator
 from app.evaluation.gates import evaluate_gate
+from app.evaluation.evaluators import (
+    BaseEvaluator,
+    ProposalCitationEvaluator,
+)
 from app.evaluation.schemas import (
     AgentEvaluationReport,
     EvaluationFinding,
@@ -20,4 +23,5 @@ __all__ = [
     "EvaluationSeverity",
     "EvaluationStatus",
     "evaluate_gate",
+    "ProposalCitationEvaluator",
 ]

@@ -189,9 +189,15 @@ class ProposalAnalysisExecution(BaseModel):
     """Complete Proposal Analysis Agent execution result."""
 
     result: ProposalAnalysisResult
+
+    retrieved_evidence: list[EvidenceReference] = Field(
+        default_factory=list,
+    )
+
     tool_calls: list[AgentToolCallTrace] = Field(
         default_factory=list,
     )
+
     tool_call_count: int = Field(ge=0)
     llm_provider: str = Field(min_length=1)
     llm_model: str = Field(min_length=1)
