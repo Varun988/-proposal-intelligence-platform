@@ -1,3 +1,5 @@
+from datetime import date
+
 from app.agents.proposal_analysis.schemas import (
     AgentToolCallTrace,
     EvidenceReference,
@@ -9,22 +11,6 @@ from app.agents.proposal_analysis.schemas import (
     ProposalAnalysisResult,
     ProposalFinding,
     ProposalSummary,
-)
-from datetime import date
-
-from app.agents.vendor_research.schemas import (
-    VendorEvidenceCategory,
-    VendorEvidenceFreshness,
-    VendorEvidenceReference,
-    VendorEvidenceSourceType,
-    VendorFindingConfidence,
-    VendorFindingSeverity,
-    VendorProfileSummary,
-    VendorResearchExecution,
-    VendorResearchFinding,
-    VendorResearchInput,
-    VendorResearchResult,
-    VendorResearchToolCallTrace,
 )
 from app.agents.risk_report.policies import RISK_REPORT_DECISION_DISCLAIMER
 from app.agents.risk_report.schemas import (
@@ -39,6 +25,20 @@ from app.agents.risk_report.schemas import (
     RiskReportResult,
     RiskSeverity,
     SynthesizedRisk,
+)
+from app.agents.vendor_research.schemas import (
+    VendorEvidenceCategory,
+    VendorEvidenceFreshness,
+    VendorEvidenceReference,
+    VendorEvidenceSourceType,
+    VendorFindingConfidence,
+    VendorFindingSeverity,
+    VendorProfileSummary,
+    VendorResearchExecution,
+    VendorResearchFinding,
+    VendorResearchInput,
+    VendorResearchResult,
+    VendorResearchToolCallTrace,
 )
 
 
@@ -275,12 +275,8 @@ class FakeRiskReportAgent:
         self.should_fail = should_fail
         self.invalid_source_reference = invalid_source_reference
         self.received_inputs: list[RiskReportInput] = []
-        self.received_proposal_finding_ids: list[
-            list[str]
-        ] = []
-        self.received_vendor_finding_ids: list[
-            list[str]
-        ] = []
+        self.received_proposal_finding_ids: list[list[str]] = []
+        self.received_vendor_finding_ids: list[list[str]] = []
 
     async def generate_report(
         self,
@@ -288,19 +284,11 @@ class FakeRiskReportAgent:
     ) -> RiskReportExecution:
         self.received_inputs.append(risk_input)
         self.received_proposal_finding_ids.append(
-            [
-                finding.finding_id
-                for finding
-                in risk_input.proposal_analysis.findings
-            ]
+            [finding.finding_id for finding in risk_input.proposal_analysis.findings]
         )
 
         self.received_vendor_finding_ids.append(
-            [
-                finding.finding_id
-                for finding
-                in risk_input.vendor_research.findings
-            ]
+            [finding.finding_id for finding in risk_input.vendor_research.findings]
             if risk_input.vendor_research is not None
             else []
         )

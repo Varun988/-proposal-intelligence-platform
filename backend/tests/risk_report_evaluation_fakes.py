@@ -27,9 +27,7 @@ def create_proposal_evidence() -> EvidenceReference:
         file_name="synthetic-proposal.pdf",
         page_number=4,
         citation_label="synthetic-proposal.pdf, page 4",
-        supporting_text=(
-            "The implementation timeline is twelve months."
-        ),
+        supporting_text=("The implementation timeline is twelve months."),
         retrieval_score=0.90,
         final_score=0.95,
     )
@@ -42,9 +40,7 @@ def create_risk_report_execution() -> RiskReportExecution:
         risk_id="risk-001",
         category=RiskCategory.DELIVERY,
         title="Delivery timeline requires validation",
-        description=(
-            "The proposal states a twelve-month timeline."
-        ),
+        description=("The proposal states a twelve-month timeline."),
         severity=RiskSeverity.MEDIUM,
         confidence=RiskConfidence.HIGH,
         evidence=[
@@ -54,12 +50,8 @@ def create_risk_report_execution() -> RiskReportExecution:
                 proposal_evidence=create_proposal_evidence(),
             )
         ],
-        business_impact=(
-            "Timeline misalignment may delay go-live."
-        ),
-        mitigation=(
-            "Validate milestones, dependencies, and dates."
-        ),
+        business_impact=("Timeline misalignment may delay go-live."),
+        mitigation=("Validate milestones, dependencies, and dates."),
         human_review_required=True,
     )
 
@@ -75,46 +67,26 @@ def create_risk_report_execution() -> RiskReportExecution:
                 ReportSection(
                     section_id="delivery-risk-section",
                     title="Delivery Risk",
-                    content=(
-                        "The proposed timeline requires validation."
-                    ),
+                    content=("The proposed timeline requires validation."),
                     related_risk_ids=["risk-001"],
                     related_finding_ids=[
                         "proposal-finding-001",
                     ],
                 )
             ],
-            unresolved_questions=[
-                "Does the timeline align with go-live?"
-            ],
-            required_human_actions=[
-                "Validate the proposed schedule."
-            ],
+            unresolved_questions=["Does the timeline align with go-live?"],
+            required_human_actions=["Validate the proposed schedule."],
         ),
         executive_report=ExecutiveReport(
             title="Executive Proposal Risk Summary",
-            executive_summary=(
-                "A delivery timeline risk requires review."
-            ),
-            key_strengths=[
-                "An explicit timeline is provided."
-            ],
-            key_risks=[
-                "Timeline alignment remains unresolved."
-            ],
-            unresolved_decisions=[
-                "Confirm the required go-live date."
-            ],
-            proposed_conditions=[
-                "Validate the delivery schedule."
-            ],
-            decision_disclaimer=(
-                RISK_REPORT_DECISION_DISCLAIMER
-            ),
+            executive_summary=("A delivery timeline risk requires review."),
+            key_strengths=["An explicit timeline is provided."],
+            key_risks=["Timeline alignment remains unresolved."],
+            unresolved_decisions=["Confirm the required go-live date."],
+            proposed_conditions=["Validate the delivery schedule."],
+            decision_disclaimer=(RISK_REPORT_DECISION_DISCLAIMER),
         ),
-        clarification_questions=[
-            "Can the vendor confirm schedule alignment?"
-        ],
+        clarification_questions=["Can the vendor confirm schedule alignment?"],
         overall_confidence=RiskConfidence.HIGH,
         human_review_required=True,
         official_decision_provided=False,

@@ -1,3 +1,17 @@
+from app.schemas.assessment import (
+    AgentExecutionSummary,
+    AssessmentCapability,
+    AssessmentCreateRequest,
+    AssessmentCreateResponse,
+    AssessmentErrorResponse,
+    AssessmentExecuteResponse,
+    AssessmentLifecycleStatus,
+    AssessmentResultsResponse,
+    AssessmentStatusResponse,
+    EvaluationSummary,
+    create_assessment_id,
+    utc_now,
+)
 from app.schemas.chunk import (
     ChunkCitation,
     ChunkingResult,
@@ -31,6 +45,15 @@ from app.schemas.retrieval import (
 )
 
 __all__ = [
+    "AgentExecutionSummary",
+    "AssessmentCapability",
+    "AssessmentCreateRequest",
+    "AssessmentCreateResponse",
+    "AssessmentErrorResponse",
+    "AssessmentExecuteResponse",
+    "AssessmentLifecycleStatus",
+    "AssessmentResultsResponse",
+    "AssessmentStatusResponse",
     "ChunkCitation",
     "ChunkingResult",
     "DeduplicationResult",
@@ -41,6 +64,7 @@ __all__ = [
     "EmbeddedChunk",
     "EmbeddingBatchResult",
     "EmbeddingVector",
+    "EvaluationSummary",
     "ExtractedDocument",
     "HealthResponse",
     "LLMMessage",
@@ -54,4 +78,6 @@ __all__ = [
     "TokenUsage",
     "VectorSearchResponse",
     "VectorSearchResult",
+    "create_assessment_id",
+    "utc_now",
 ]

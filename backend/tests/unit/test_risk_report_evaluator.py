@@ -31,23 +31,15 @@ def test_evaluator_fails_instruction_version_mismatch() -> None:
 
     assert result.status is EvaluationStatus.FAILED
 
-    finding_ids = {
-        finding.finding_id
-        for finding in result.findings
-    }
+    finding_ids = {finding.finding_id for finding in result.findings}
 
-    assert (
-        "risk-report-instruction-version-mismatch"
-        in finding_ids
-    )
+    assert "risk-report-instruction-version-mismatch" in finding_ids
 
 
 def test_evaluator_fails_disabled_risk_review() -> None:
     execution = create_risk_report_execution()
 
-    modified_risk = deepcopy(
-        execution.result.risks[0]
-    )
+    modified_risk = deepcopy(execution.result.risks[0])
     modified_risk.human_review_required = False
 
     execution.result.risks = [modified_risk]
@@ -57,40 +49,28 @@ def test_evaluator_fails_disabled_risk_review() -> None:
     assert result.status is EvaluationStatus.FAILED
 
     assert any(
-        finding.finding_id.startswith(
-            "risk-human-review-disabled"
-        )
-        for finding in result.findings
+        finding.finding_id.startswith("risk-human-review-disabled") for finding in result.findings
     )
 
 
 def test_evaluator_fails_unknown_source_finding() -> None:
     execution = create_risk_report_execution()
 
-    execution.result.risks[
-        0
-    ].evidence[0].source_finding_id = (
-        "unknown-finding"
-    )
+    execution.result.risks[0].evidence[0].source_finding_id = "unknown-finding"
 
     result = RiskReportEvaluator().evaluate(execution)
 
     assert result.status is EvaluationStatus.FAILED
 
     assert any(
-        finding.finding_id.startswith(
-            "unknown-proposal-risk-source"
-        )
-        for finding in result.findings
+        finding.finding_id.startswith("unknown-proposal-risk-source") for finding in result.findings
     )
 
 
 def test_evaluator_fails_unknown_report_risk_reference() -> None:
     execution = create_risk_report_execution()
 
-    execution.result.reviewer_report.sections[
-        0
-    ].related_risk_ids = [
+    execution.result.reviewer_report.sections[0].related_risk_ids = [
         "unknown-risk",
     ]
 
@@ -99,9 +79,7 @@ def test_evaluator_fails_unknown_report_risk_reference() -> None:
     assert result.status is EvaluationStatus.FAILED
 
     assert any(
-        finding.finding_id.startswith(
-            "unknown-report-risk-reference"
-        )
+        finding.finding_id.startswith("unknown-report-risk-reference")
         for finding in result.findings
     )
 
@@ -109,9 +87,7 @@ def test_evaluator_fails_unknown_report_risk_reference() -> None:
 def test_evaluator_fails_unknown_report_finding_reference() -> None:
     execution = create_risk_report_execution()
 
-    execution.result.reviewer_report.sections[
-        0
-    ].related_finding_ids = [
+    execution.result.reviewer_report.sections[0].related_finding_ids = [
         "unknown-finding",
     ]
 
@@ -120,9 +96,7 @@ def test_evaluator_fails_unknown_report_finding_reference() -> None:
     assert result.status is EvaluationStatus.FAILED
 
     assert any(
-        finding.finding_id.startswith(
-            "unknown-report-finding-reference"
-        )
+        finding.finding_id.startswith("unknown-report-finding-reference")
         for finding in result.findings
     )
 
@@ -143,8 +117,5 @@ def test_evaluator_warns_for_duplicate_section_id() -> None:
     assert result.score < 1.0
 
     assert any(
-        finding.finding_id.startswith(
-            "duplicate-report-section"
-        )
-        for finding in result.findings
+        finding.finding_id.startswith("duplicate-report-section") for finding in result.findings
     )

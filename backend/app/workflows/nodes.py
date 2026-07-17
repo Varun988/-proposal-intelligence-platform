@@ -105,10 +105,7 @@ class AssessmentWorkflowNodes:
         event = WorkflowEvent(
             event_type=WorkflowEventType.STATUS_CHANGED,
             status=WorkflowStatus.ORCHESTRATION_PENDING,
-            message=(
-                "Assessment workflow initialized and orchestration "
-                "planning is pending."
-            ),
+            message=("Assessment workflow initialized and orchestration planning is pending."),
             metadata={"previous_status": state.status.value},
         )
 
@@ -147,10 +144,7 @@ class AssessmentWorkflowNodes:
                 execution=execution,
             )
         except Exception as error:
-            error_message = (
-                "Orchestrator planning failed: "
-                f"{type(error).__name__}."
-            )
+            error_message = f"Orchestrator planning failed: {type(error).__name__}."
             failure_event = WorkflowEvent(
                 event_type=WorkflowEventType.WORKFLOW_FAILED,
                 status=WorkflowStatus.HUMAN_REVIEW_REQUIRED,
@@ -182,9 +176,7 @@ class AssessmentWorkflowNodes:
         completed_event = WorkflowEvent(
             event_type=WorkflowEventType.ORCHESTRATION_COMPLETED,
             status=WorkflowStatus.ORCHESTRATION_COMPLETED,
-            message=(
-                "Orchestrator created a validated specialist-agent plan."
-            ),
+            message=("Orchestrator created a validated specialist-agent plan."),
             agent_name="orchestrator",
             metadata={
                 "task_count": execution.plan.task_count,
@@ -346,9 +338,7 @@ class AssessmentWorkflowNodes:
                     evaluation_id=report.evaluation_id,
                     overall_score=report.overall_score,
                     release_approved=report.release_approved,
-                    blocking_gate_failure_count=(
-                        report.blocking_gate_failure_count
-                    ),
+                    blocking_gate_failure_count=(report.blocking_gate_failure_count),
                 ),
             ],
             "events": [*state.events, started_event, completed_event],
@@ -369,10 +359,7 @@ class AssessmentWorkflowNodes:
         if self._vendor_research_agent is None:
             return self._create_human_review_update(
                 state=state,
-                reason=(
-                    "Vendor Research is planned, but no Vendor Research "
-                    "Agent is configured."
-                ),
+                reason=("Vendor Research is planned, but no Vendor Research Agent is configured."),
                 event_type=WorkflowEventType.WORKFLOW_FAILED,
                 agent_name="vendor-research",
             )
@@ -380,10 +367,7 @@ class AssessmentWorkflowNodes:
         if state.vendor_research_input is None:
             return self._create_human_review_update(
                 state=state,
-                reason=(
-                    "Vendor Research is planned, but no Vendor Research "
-                    "input is available."
-                ),
+                reason=("Vendor Research is planned, but no Vendor Research input is available."),
                 event_type=WorkflowEventType.WORKFLOW_FAILED,
                 agent_name="vendor-research",
             )
@@ -524,9 +508,7 @@ class AssessmentWorkflowNodes:
                     evaluation_id=report.evaluation_id,
                     overall_score=report.overall_score,
                     release_approved=report.release_approved,
-                    blocking_gate_failure_count=(
-                        report.blocking_gate_failure_count
-                    ),
+                    blocking_gate_failure_count=(report.blocking_gate_failure_count),
                 ),
             ],
             "events": [*state.events, started_event, completed_event],
@@ -544,14 +526,9 @@ class AssessmentWorkflowNodes:
                 node_name="prepare_risk_report_input",
             )
 
-        proposal_execution = (
-            state.proposal_analysis_execution
-        )
+        proposal_execution = state.proposal_analysis_execution
 
-        if (
-            proposal_execution is None
-            or not state.proposal_analysis_passed
-        ):
+        if proposal_execution is None or not state.proposal_analysis_passed:
             return self._create_human_review_update(
                 state=state,
                 reason=(
@@ -565,10 +542,7 @@ class AssessmentWorkflowNodes:
         vendor_result = None
 
         if state.vendor_research_planned:
-            if (
-                state.vendor_research_execution is None
-                or not state.vendor_research_passed
-            ):
+            if state.vendor_research_execution is None or not state.vendor_research_passed:
                 return self._create_human_review_update(
                     state=state,
                     reason=(
@@ -579,9 +553,7 @@ class AssessmentWorkflowNodes:
                     agent_name="risk-report",
                 )
 
-            vendor_result = (
-                state.vendor_research_execution.result
-            )
+            vendor_result = state.vendor_research_execution.result
 
         existing_input = state.risk_report_input
 
@@ -603,8 +575,7 @@ class AssessmentWorkflowNodes:
             proposal_analysis=proposal_execution.result,
             vendor_research=vendor_result,
             deterministic_scores=[
-                score.model_copy(deep=True)
-                for score in existing_input.deterministic_scores
+                score.model_copy(deep=True) for score in existing_input.deterministic_scores
             ],
             report_objectives=[
                 *existing_input.report_objectives,
@@ -615,23 +586,16 @@ class AssessmentWorkflowNodes:
         event = WorkflowEvent(
             event_type=WorkflowEventType.STATUS_CHANGED,
             status=WorkflowStatus.RISK_REPORT_PENDING,
-            message=(
-                "Risk and Report input was prepared from validated "
-                "specialist-agent outputs."
-            ),
+            message=("Risk and Report input was prepared from validated specialist-agent outputs."),
             agent_name="risk-report",
             metadata={
-                "proposal_finding_count": len(
-                    prepared_input.proposal_analysis.findings
-                ),
+                "proposal_finding_count": len(prepared_input.proposal_analysis.findings),
                 "vendor_finding_count": (
                     len(prepared_input.vendor_research.findings)
                     if prepared_input.vendor_research is not None
                     else 0
                 ),
-                "deterministic_score_count": len(
-                    prepared_input.deterministic_scores
-                ),
+                "deterministic_score_count": len(prepared_input.deterministic_scores),
             },
         )
 
@@ -661,10 +625,7 @@ class AssessmentWorkflowNodes:
         if self._risk_report_agent is None:
             return self._create_human_review_update(
                 state=state,
-                reason=(
-                    "Risk reporting is planned, but no Risk and Report "
-                    "Agent is configured."
-                ),
+                reason=("Risk reporting is planned, but no Risk and Report Agent is configured."),
                 event_type=WorkflowEventType.WORKFLOW_FAILED,
                 agent_name="risk-report",
             )
@@ -672,10 +633,7 @@ class AssessmentWorkflowNodes:
         if state.risk_report_input is None:
             return self._create_human_review_update(
                 state=state,
-                reason=(
-                    "Risk reporting is planned, but no Risk and Report "
-                    "input is available."
-                ),
+                reason=("Risk reporting is planned, but no Risk and Report input is available."),
                 event_type=WorkflowEventType.WORKFLOW_FAILED,
                 agent_name="risk-report",
             )
@@ -743,8 +701,7 @@ class AssessmentWorkflowNodes:
             return self._create_human_review_update(
                 state=state,
                 reason=(
-                    "Risk and Report evaluation cannot run because "
-                    "the execution is unavailable."
+                    "Risk and Report evaluation cannot run because the execution is unavailable."
                 ),
                 event_type=WorkflowEventType.WORKFLOW_FAILED,
                 agent_name="risk-report",
@@ -810,9 +767,7 @@ class AssessmentWorkflowNodes:
                     evaluation_id=report.evaluation_id,
                     overall_score=report.overall_score,
                     release_approved=report.release_approved,
-                    blocking_gate_failure_count=(
-                        report.blocking_gate_failure_count
-                    ),
+                    blocking_gate_failure_count=(report.blocking_gate_failure_count),
                 ),
             ],
             "events": [*state.events, started_event, completed_event],
@@ -824,10 +779,7 @@ class AssessmentWorkflowNodes:
     ) -> dict[str, object]:
         """Route the workflow to human review."""
 
-        reason = (
-            state.human_review_reason
-            or self._build_evaluation_failure_reason(state)
-        )
+        reason = state.human_review_reason or self._build_evaluation_failure_reason(state)
         event = WorkflowEvent(
             event_type=WorkflowEventType.HUMAN_REVIEW_REQUESTED,
             status=WorkflowStatus.HUMAN_REVIEW_REQUIRED,
@@ -851,10 +803,7 @@ class AssessmentWorkflowNodes:
         event = WorkflowEvent(
             event_type=WorkflowEventType.WORKFLOW_COMPLETED,
             status=WorkflowStatus.COMPLETED,
-            message=(
-                "All planned specialist agents passed their "
-                "deterministic evaluation gates."
-            ),
+            message=("All planned specialist agents passed their deterministic evaluation gates."),
         )
         return {
             "status": WorkflowStatus.COMPLETED,
@@ -966,15 +915,12 @@ class AssessmentWorkflowNodes:
         """Validate identity and mandatory plan tasks."""
 
         if execution.plan.assessment_id != state.assessment_id:
-            raise ValueError(
-                "Orchestration plan assessment ID does not match workflow state."
-            )
+            raise ValueError("Orchestration plan assessment ID does not match workflow state.")
 
         planned_agents = {task.agent_name for task in execution.plan.tasks}
         if SpecialistAgentName.PROPOSAL_ANALYSIS not in planned_agents:
             raise ValueError(
-                "Orchestration plan does not contain the mandatory "
-                "Proposal Analysis Agent task."
+                "Orchestration plan does not contain the mandatory Proposal Analysis Agent task."
             )
 
     @staticmethod
@@ -990,10 +936,7 @@ class AssessmentWorkflowNodes:
         ]
         report = next((item for item in reports if item is not None), None)
         if report is None:
-            return (
-                "Human review is required because no valid evaluation "
-                "report is available."
-            )
+            return "Human review is required because no valid evaluation report is available."
         return (
             "Human review is required because an agent failed "
             f"{report.blocking_gate_failure_count} blocking evaluation "
@@ -1063,15 +1006,10 @@ class AssessmentWorkflowNodes:
 
         safe_error_detail = str(error).strip()
 
-        error_message = (
-            f"{agent_name} execution failed: "
-            f"{type(error).__name__}."
-        )
+        error_message = f"{agent_name} execution failed: {type(error).__name__}."
 
         if safe_error_detail:
-            error_message = (
-                f"{error_message} {safe_error_detail}"
-            )
+            error_message = f"{error_message} {safe_error_detail}"
         failure_event = WorkflowEvent(
             event_type=WorkflowEventType.WORKFLOW_FAILED,
             status=WorkflowStatus.HUMAN_REVIEW_REQUIRED,
@@ -1120,7 +1058,7 @@ class AssessmentWorkflowNodes:
         update["events"] = [
             *state.events,
             started_event,
-            *update["events"][len(state.events):],
+            *update["events"][len(state.events) :],
         ]
         return update
 
@@ -1133,8 +1071,7 @@ class AssessmentWorkflowNodes:
         if (
             state.risk_report_input is None
             or state.human_review_required
-            or state.next_route
-            is WorkflowRoute.REQUIRE_HUMAN_REVIEW
+            or state.next_route is WorkflowRoute.REQUIRE_HUMAN_REVIEW
         ):
             return "human_review"
 

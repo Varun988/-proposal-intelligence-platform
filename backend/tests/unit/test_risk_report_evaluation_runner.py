@@ -24,11 +24,7 @@ def test_runner_approves_valid_risk_report() -> None:
 def test_runner_rejects_invalid_source_reference() -> None:
     execution = create_risk_report_execution()
 
-    execution.result.risks[
-        0
-    ].evidence[0].source_finding_id = (
-        "unknown-finding"
-    )
+    execution.result.risks[0].evidence[0].source_finding_id = "unknown-finding"
 
     runner = create_risk_report_evaluation_runner()
 
@@ -45,9 +41,7 @@ def test_runner_rejects_invalid_source_reference() -> None:
 def test_runner_rejects_invalid_report_reference() -> None:
     execution = create_risk_report_execution()
 
-    execution.result.reviewer_report.sections[
-        0
-    ].related_risk_ids = [
+    execution.result.reviewer_report.sections[0].related_risk_ids = [
         "unknown-risk",
     ]
 

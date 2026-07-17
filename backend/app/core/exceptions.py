@@ -160,3 +160,19 @@ class EvaluationConfigurationError(EvaluationError):
 
 class EvaluationExecutionError(EvaluationError):
     """Raised when an evaluator cannot complete its evaluation."""
+
+
+class AssessmentError(ApplicationError):
+    """Base exception for assessment operations."""
+
+
+class AssessmentNotFoundError(AssessmentError):
+    """Raised when an assessment cannot be found."""
+
+
+class AssessmentConflictError(AssessmentError):
+    """Raised when an assessment operation conflicts with its state."""
+
+
+class AssessmentExecutionError(AssessmentError):
+    """Raised when an assessment workflow cannot be executed."""

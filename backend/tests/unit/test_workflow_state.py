@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
-from app.agents.orchestrator.schemas import OrchestratorInput
 
+from app.agents.orchestrator.schemas import OrchestratorInput
 from app.agents.proposal_analysis.schemas import (
     ProposalAnalysisInput,
 )

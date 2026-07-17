@@ -321,6 +321,7 @@ async def test_agent_rejects_mismatched_vendor_name() -> None:
             )
         )
 
+
 @pytest.mark.asyncio
 async def test_agent_canonicalizes_evidence_metadata() -> None:
     structured_data = create_structured_result()
@@ -362,10 +363,7 @@ async def test_agent_canonicalizes_evidence_metadata() -> None:
     assert evidence == inventory_evidence
     assert evidence.publication_date == date(2026, 1, 1)
     assert evidence.retrieved_date == date(2026, 7, 17)
-    assert (
-        evidence.freshness
-        is VendorEvidenceFreshness.CURRENT
-    )
+    assert evidence.freshness is VendorEvidenceFreshness.CURRENT
     assert evidence.retrieval_score == 0.90
     assert evidence.final_score == 0.95
 
@@ -401,11 +399,7 @@ async def test_agent_does_not_canonicalize_unknown_evidence() -> None:
         )
     )
 
-    cited_evidence = (
-        execution.result.findings[0].evidence[0]
-    )
+    cited_evidence = execution.result.findings[0].evidence[0]
 
-    assert cited_evidence.evidence_id == (
-        "fabricated-evidence"
-    )
+    assert cited_evidence.evidence_id == ("fabricated-evidence")
     assert cited_evidence.chunk_id == "fabricated-chunk"

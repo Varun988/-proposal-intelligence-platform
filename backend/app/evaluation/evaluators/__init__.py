@@ -2,6 +2,9 @@ from app.evaluation.evaluators.base import BaseEvaluator
 from app.evaluation.evaluators.citation import (
     ProposalCitationEvaluator,
 )
+from app.evaluation.evaluators.risk_report import (
+    RiskReportEvaluator,
+)
 from app.evaluation.evaluators.trajectory import (
     ProposalTrajectoryEvaluator,
 )
@@ -10,9 +13,6 @@ from app.evaluation.evaluators.vendor_citation import (
 )
 from app.evaluation.evaluators.vendor_trajectory import (
     VendorResearchTrajectoryEvaluator,
-)
-from app.evaluation.evaluators.risk_report import (
-    RiskReportEvaluator,
 )
 
 __all__ = [
@@ -23,4 +23,3 @@ __all__ = [
     "VendorResearchCitationEvaluator",
     "VendorResearchTrajectoryEvaluator",
 ]
-

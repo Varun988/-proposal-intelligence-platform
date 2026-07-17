@@ -24,11 +24,11 @@ __all__ = [
     "AssessmentWorkflowState",
     "EvaluationRecord",
     "ProposalAnalysisAgentProtocol",
+    "RiskReportAgentProtocol",
+    "VendorResearchAgentProtocol",
     "WorkflowEvent",
     "WorkflowEventType",
     "WorkflowRoute",
     "WorkflowStatus",
     "create_assessment_graph",
-    "VendorResearchAgentProtocol",
-    "RiskReportAgentProtocol",
 ]

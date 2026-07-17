@@ -11,8 +11,7 @@ from app.evaluation.schemas import (
 )
 
 
-def create_risk_report_evaluation_runner(
-) -> AgentEvaluationRunner:
+def create_risk_report_evaluation_runner() -> AgentEvaluationRunner:
     """Create the default Risk and Report evaluator suite."""
 
     return AgentEvaluationRunner(
@@ -29,4 +28,3 @@ def create_risk_report_evaluation_runner(
             )
         ],
     )
-    

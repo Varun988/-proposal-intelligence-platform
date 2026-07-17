@@ -471,24 +471,16 @@ class VendorResearchAgent:
     ) -> VendorResearchResult:
         """Replace LLM citation metadata with retrieved source data."""
 
-        evidence_by_id = {
-            evidence.evidence_id: evidence
-            for evidence in evidence_inventory
-        }
+        evidence_by_id = {evidence.evidence_id: evidence for evidence in evidence_inventory}
 
-        evidence_by_chunk_id = {
-            evidence.chunk_id: evidence
-            for evidence in evidence_inventory
-        }
+        evidence_by_chunk_id = {evidence.chunk_id: evidence for evidence in evidence_inventory}
 
         canonical_result = result.model_copy(
             deep=True,
         )
 
         for finding in canonical_result.findings:
-            canonical_evidence: list[
-                VendorEvidenceReference
-            ] = []
+            canonical_evidence: list[VendorEvidenceReference] = []
 
             for cited_evidence in finding.evidence:
                 retrieved_evidence = evidence_by_id.get(
@@ -525,10 +517,8 @@ class VendorResearchAgent:
                 )
 
             if first_retrieved is not None:
-                conflict.first_evidence = (
-                    first_retrieved.model_copy(
-                        deep=True,
-                    )
+                conflict.first_evidence = first_retrieved.model_copy(
+                    deep=True,
                 )
 
             second_retrieved = evidence_by_id.get(
@@ -541,23 +531,18 @@ class VendorResearchAgent:
                 )
 
             if second_retrieved is not None:
-                conflict.second_evidence = (
-                    second_retrieved.model_copy(
-                        deep=True,
-                    )
+                conflict.second_evidence = second_retrieved.model_copy(
+                    deep=True,
                 )
 
         canonical_result.stale_evidence_ids = [
             evidence.evidence_id
             for evidence in evidence_inventory
-            if (
-                evidence.freshness
-                is VendorEvidenceFreshness.STALE
-            )
+            if (evidence.freshness is VendorEvidenceFreshness.STALE)
         ]
 
         return canonical_result
-    
+
     @staticmethod
     def _validate_llm_output(
         structured_data: dict[str, Any] | None,

@@ -5,12 +5,14 @@ from app.agents.orchestrator.schemas import OrchestratorInput
 from app.agents.proposal_analysis.schemas import (
     ProposalAnalysisInput,
 )
+from app.agents.risk_report.schemas import RiskReportInput
 from app.agents.vendor_research.schemas import (
     VendorResearchInput,
 )
 from app.evaluation.proposal_analysis import (
     create_proposal_analysis_evaluation_runner,
 )
+from app.evaluation.risk_report import create_risk_report_evaluation_runner
 from app.evaluation.vendor_research import (
     create_vendor_research_evaluation_runner,
 )
@@ -23,16 +25,11 @@ from app.workflows.state import (
 )
 from tests.workflow_fakes import (
     FakeProposalAnalysisAgent,
-    FakeVendorResearchAgent,
-)
-from app.agents.risk_report.schemas import RiskReportInput
-from app.evaluation.risk_report import create_risk_report_evaluation_runner
-from tests.workflow_fakes import (
-    FakeProposalAnalysisAgent,
     FakeRiskReportAgent,
     FakeVendorResearchAgent,
     create_fake_proposal_result,
 )
+
 
 def create_state(
     maximum_steps: int = 12,
@@ -82,27 +79,12 @@ def create_graph(
 
     return create_assessment_graph(
         orchestrator_agent=OrchestratorAgent(),
-        proposal_analysis_agent=(
-            proposal_agent
-            or FakeProposalAnalysisAgent()
-        ),
-        proposal_evaluation_runner=(
-            create_proposal_analysis_evaluation_runner()
-        ),
-        vendor_research_agent=(
-            vendor_agent
-            or FakeVendorResearchAgent()
-        ),
-        vendor_evaluation_runner=(
-            create_vendor_research_evaluation_runner()
-        ),
-        risk_report_agent=(
-            risk_agent
-            or FakeRiskReportAgent()
-        ),
-        risk_report_evaluation_runner=(
-            create_risk_report_evaluation_runner()
-        ),
+        proposal_analysis_agent=(proposal_agent or FakeProposalAnalysisAgent()),
+        proposal_evaluation_runner=(create_proposal_analysis_evaluation_runner()),
+        vendor_research_agent=(vendor_agent or FakeVendorResearchAgent()),
+        vendor_evaluation_runner=(create_vendor_research_evaluation_runner()),
+        risk_report_agent=(risk_agent or FakeRiskReportAgent()),
+        risk_report_evaluation_runner=(create_risk_report_evaluation_runner()),
     )
 
 
@@ -311,10 +293,7 @@ async def test_workflow_records_agent_and_evaluation_results() -> None:
         result,
     )
 
-    assert [
-        record.agent_name
-        for record in final_state.agent_execution_records
-    ] == [
+    assert [record.agent_name for record in final_state.agent_execution_records] == [
         "orchestrator",
         "proposal-analysis",
         "vendor-research",
@@ -373,7 +352,6 @@ async def test_workflow_respects_step_limit() -> None:
     assert "step limit" in (final_state.human_review_reason.casefold())
 
 
-
 @pytest.mark.asyncio
 async def test_workflow_executes_risk_report() -> None:
     risk_agent = FakeRiskReportAgent()
@@ -423,6 +401,7 @@ async def test_completed_workflow_preserves_human_authority() -> None:
     assert final_state.human_review_reason is not None
     assert "human" in final_state.human_review_reason.casefold()
 
+
 @pytest.mark.asyncio
 async def test_risk_report_receives_actual_proposal_output() -> None:
     risk_agent = FakeRiskReportAgent()
@@ -441,22 +420,14 @@ async def test_risk_report_receives_actual_proposal_output() -> None:
     assert len(risk_agent.received_inputs) == 1
 
     received_input = risk_agent.received_inputs[0]
-    proposal_execution = (
-        final_state.proposal_analysis_execution
-    )
+    proposal_execution = final_state.proposal_analysis_execution
 
     assert proposal_execution is not None
 
-    assert received_input.proposal_analysis == (
-        proposal_execution.result
-    )
+    assert received_input.proposal_analysis == (proposal_execution.result)
 
     assert risk_agent.received_proposal_finding_ids == [
-        [
-            finding.finding_id
-            for finding
-            in proposal_execution.result.findings
-        ]
+        [finding.finding_id for finding in proposal_execution.result.findings]
     ]
 
 
@@ -474,25 +445,17 @@ async def test_risk_report_receives_actual_vendor_output() -> None:
         result,
     )
 
-    vendor_execution = (
-        final_state.vendor_research_execution
-    )
+    vendor_execution = final_state.vendor_research_execution
 
     assert vendor_execution is not None
     assert len(risk_agent.received_inputs) == 1
 
     received_input = risk_agent.received_inputs[0]
 
-    assert received_input.vendor_research == (
-        vendor_execution.result
-    )
+    assert received_input.vendor_research == (vendor_execution.result)
 
     assert risk_agent.received_vendor_finding_ids == [
-        [
-            finding.finding_id
-            for finding
-            in vendor_execution.result.findings
-        ]
+        [finding.finding_id for finding in vendor_execution.result.findings]
     ]
 
 
@@ -535,22 +498,15 @@ async def test_workflow_records_risk_input_preparation() -> None:
     preparation_events = [
         event
         for event in final_state.events
-        if (
-            event.agent_name == "risk-report"
-            and "input was prepared" in event.message
-        )
+        if (event.agent_name == "risk-report" and "input was prepared" in event.message)
     ]
 
     assert len(preparation_events) == 1
-    assert preparation_events[0].metadata[
-        "proposal_finding_count"
-    ] >= 1
-    assert preparation_events[0].metadata[
-        "vendor_finding_count"
-    ] >= 1
+    assert preparation_events[0].metadata["proposal_finding_count"] >= 1
+    assert preparation_events[0].metadata["vendor_finding_count"] >= 1
+
 
 def test_graph_compiles_successfully() -> None:
     graph = create_graph()
 
     assert graph is not None
-

@@ -2,8 +2,8 @@ from app.agents.vendor_research.policies import (
     VENDOR_RESEARCH_ALLOWED_SOURCE_TYPES,
 )
 from app.agents.vendor_research.schemas import (
-    VendorEvidenceReference,
     VendorEvidenceFreshness,
+    VendorEvidenceReference,
     VendorFindingConfidence,
     VendorResearchExecution,
     VendorResearchFinding,

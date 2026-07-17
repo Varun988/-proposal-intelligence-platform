@@ -265,14 +265,10 @@ def create_placeholder_proposal_result() -> ProposalAnalysisResult:
         assessment_id=ASSESSMENT_ID,
         proposal_document_id=PROPOSAL_DOCUMENT_ID,
         summary=ProposalSummary(),
-        executive_summary=(
-            "Placeholder only; replaced by validated workflow output."
-        ),
+        executive_summary=("Placeholder only; replaced by validated workflow output."),
         overall_confidence=FindingConfidence.LOW,
         human_review_required=True,
-        analysis_limitations=[
-            "Placeholder input; not used as final specialist evidence."
-        ],
+        analysis_limitations=["Placeholder input; not used as final specialist evidence."],
     )
 
 
@@ -288,20 +284,11 @@ def print_gate_report(label: str, report: object | None) -> None:
 
     print(f"Release approved: {report.release_approved}")
     print(f"Overall score: {report.overall_score:.2f}")
-    print(
-        "Blocking failures: "
-        f"{report.blocking_gate_failure_count}"
-    )
+    print(f"Blocking failures: {report.blocking_gate_failure_count}")
     for result in report.results:
-        print(
-            f"- {result.evaluator_name}: "
-            f"{result.status.value} ({result.score:.2f})"
-        )
+        print(f"- {result.evaluator_name}: {result.status.value} ({result.score:.2f})")
         for finding in result.findings:
-            print(
-                f"  [{finding.severity.value}] "
-                f"{finding.description}"
-            )
+            print(f"  [{finding.severity.value}] {finding.description}")
 
 
 async def run_smoke_test() -> None:
@@ -328,9 +315,7 @@ async def run_smoke_test() -> None:
 
     retrieval_service = build_retrieval_service(settings)
     tool_registry = ToolRegistry()
-    tool_registry.register(
-        SearchEvidenceTool(retrieval_service=retrieval_service)
-    )
+    tool_registry.register(SearchEvidenceTool(retrieval_service=retrieval_service))
 
     gemini_provider = GeminiProvider(
         api_key=settings.gemini_api_key,
@@ -356,17 +341,11 @@ async def run_smoke_test() -> None:
     graph = create_assessment_graph(
         orchestrator_agent=OrchestratorAgent(),
         proposal_analysis_agent=proposal_agent,
-        proposal_evaluation_runner=(
-            create_proposal_analysis_evaluation_runner()
-        ),
+        proposal_evaluation_runner=(create_proposal_analysis_evaluation_runner()),
         vendor_research_agent=vendor_agent,
-        vendor_evaluation_runner=(
-            create_vendor_research_evaluation_runner()
-        ),
+        vendor_evaluation_runner=(create_vendor_research_evaluation_runner()),
         risk_report_agent=risk_agent,
-        risk_report_evaluation_runner=(
-            create_risk_report_evaluation_runner()
-        ),
+        risk_report_evaluation_runner=(create_risk_report_evaluation_runner()),
     )
 
     state = AssessmentWorkflowState(
@@ -388,10 +367,7 @@ async def run_smoke_test() -> None:
                 "staffing, support, and security controls",
             ],
             requirements=[
-                (
-                    "The proposal must provide an implementation timeline "
-                    "and delivery approach."
-                )
+                ("The proposal must provide an implementation timeline and delivery approach.")
             ],
         ),
         vendor_research_input=VendorResearchInput(
@@ -457,9 +433,7 @@ async def run_smoke_test() -> None:
         print("-" * 25)
         print(
             json.dumps(
-                final_state.proposal_analysis_execution.result.model_dump(
-                    mode="json"
-                ),
+                final_state.proposal_analysis_execution.result.model_dump(mode="json"),
                 indent=2,
             )
         )
@@ -470,9 +444,7 @@ async def run_smoke_test() -> None:
         print("-" * 23)
         print(
             json.dumps(
-                final_state.vendor_research_execution.result.model_dump(
-                    mode="json"
-                ),
+                final_state.vendor_research_execution.result.model_dump(mode="json"),
                 indent=2,
             )
         )
@@ -483,9 +455,7 @@ async def run_smoke_test() -> None:
         print("-" * 23)
         print(
             json.dumps(
-                final_state.risk_report_execution.result.model_dump(
-                    mode="json"
-                ),
+                final_state.risk_report_execution.result.model_dump(mode="json"),
                 indent=2,
             )
         )
@@ -499,34 +469,21 @@ async def run_smoke_test() -> None:
     completed_agents = set(final_state.completed_agents)
 
     if final_state.status is not WorkflowStatus.COMPLETED:
-        raise RuntimeError(
-            "Smoke test failed: workflow did not reach COMPLETED."
-        )
+        raise RuntimeError("Smoke test failed: workflow did not reach COMPLETED.")
     if not expected_agents.issubset(completed_agents):
-        raise RuntimeError(
-            "Smoke test failed: not all planned agents completed."
-        )
+        raise RuntimeError("Smoke test failed: not all planned agents completed.")
     if not final_state.human_review_required:
-        raise RuntimeError(
-            "Smoke test failed: human review was disabled."
-        )
+        raise RuntimeError("Smoke test failed: human review was disabled.")
     if final_state.errors:
-        raise RuntimeError(
-            "Smoke test failed: workflow recorded errors."
-        )
+        raise RuntimeError("Smoke test failed: workflow recorded errors.")
 
     evaluation_reports = [
         final_state.proposal_analysis_evaluation,
         final_state.vendor_research_evaluation,
         final_state.risk_report_evaluation,
     ]
-    if any(
-        report is None or not report.release_approved
-        for report in evaluation_reports
-    ):
-        raise RuntimeError(
-            "Smoke test failed: one or more release gates did not pass."
-        )
+    if any(report is None or not report.release_approved for report in evaluation_reports):
+        raise RuntimeError("Smoke test failed: one or more release gates did not pass.")
 
     logger.info(
         "Live synthetic four-agent workflow completed",

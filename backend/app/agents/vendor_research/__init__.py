@@ -42,10 +42,10 @@ __all__ = [
     "VendorFindingConfidence",
     "VendorFindingSeverity",
     "VendorProfileSummary",
+    "VendorResearchAgent",
     "VendorResearchExecution",
     "VendorResearchFinding",
     "VendorResearchInput",
     "VendorResearchResult",
     "VendorResearchToolCallTrace",
-    "VendorResearchAgent",
 ]

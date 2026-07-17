@@ -43,11 +43,11 @@ __all__ = [
     "RiskCategory",
     "RiskConfidence",
     "RiskEvidenceReference",
+    "RiskReportAgent",
     "RiskReportExecution",
     "RiskReportInput",
     "RiskReportResult",
     "RiskSeverity",
     "RiskStatus",
-    "RiskReportAgent",
     "SynthesizedRisk",
 ]
