@@ -176,3 +176,15 @@ class AssessmentConflictError(AssessmentError):
 
 class AssessmentExecutionError(AssessmentError):
     """Raised when an assessment workflow cannot be executed."""
+
+
+class DocumentConflictError(DocumentError):
+    """Raised when a document operation conflicts with stored state."""
+
+
+class DocumentValidationError(DocumentError):
+    """Raised when an uploaded document fails validation."""
+
+
+class DocumentStorageError(DocumentError):
+    """Raised when document content cannot be stored or retrieved."""

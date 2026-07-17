@@ -7,7 +7,16 @@ from app.services.assessment_execution_service import (
     UnavailableAssessmentWorkflowExecutor,
 )
 from app.services.assessment_service import AssessmentService
-
+from app.repositories.document import (
+    InMemoryDocumentRepository,
+)
+from app.services.document_service import DocumentService
+from app.services.document_validation_service import (
+    DocumentValidationService,
+)
+from app.storage.document_storage import (
+    InMemoryDocumentStorage,
+)
 
 @lru_cache
 def get_assessment_repository() -> InMemoryAssessmentRepository:
@@ -37,4 +46,41 @@ def get_assessment_execution_service() -> AssessmentExecutionService:
     return AssessmentExecutionService(
         repository=get_assessment_repository(),
         workflow_executor=get_assessment_workflow_executor(),
+    )
+
+
+@lru_cache
+def get_document_repository(
+) -> InMemoryDocumentRepository:
+    """Return the shared document metadata repository."""
+
+    return InMemoryDocumentRepository()
+
+
+@lru_cache
+def get_document_storage(
+) -> InMemoryDocumentStorage:
+    """Return the shared binary document storage."""
+
+    return InMemoryDocumentStorage()
+
+
+@lru_cache
+def get_document_validation_service(
+) -> DocumentValidationService:
+    """Return the document validation service."""
+
+    return DocumentValidationService()
+
+
+@lru_cache
+def get_document_service() -> DocumentService:
+    """Return the shared document service."""
+
+    return DocumentService(
+        repository=get_document_repository(),
+        storage=get_document_storage(),
+        validation_service=(
+            get_document_validation_service()
+        ),
     )
