@@ -6,6 +6,10 @@ from app.documents.parsers import (
 )
 from app.documents.registry import DocumentParserRegistry
 from app.rag.chunking import PageAwareDocumentChunker
+from app.rag.vector_store.faiss_store import FaissVectorStore
+from app.repositories.assessment_vector_index import (
+    InMemoryAssessmentVectorIndexRegistry,
+)
 from app.repositories.document import (
     InMemoryDocumentRepository,
 )
@@ -29,6 +33,9 @@ from app.services.document_chunking_service import (
 from app.services.document_extraction_service import (
     DocumentExtractionService,
 )
+from app.services.document_indexing_service import (
+    DocumentIndexingService,
+)
 from app.services.document_pipeline_service import (
     DocumentPipelineService,
 )
@@ -39,18 +46,12 @@ from app.services.document_service import DocumentService
 from app.services.document_validation_service import (
     DocumentValidationService,
 )
+from app.services.embedding_service import EmbeddingService
 from app.storage.document_storage import (
     InMemoryDocumentStorage,
 )
-from app.rag.vector_store.faiss_store import FaissVectorStore
-from app.repositories.assessment_vector_index import (
-    InMemoryAssessmentVectorIndexRegistry,
-)
-from app.services.document_indexing_service import (
-    DocumentIndexingService,
-)
-from app.services.embedding_service import EmbeddingService
 from tests.embedding_fakes import FakeEmbeddingProvider
+
 
 def create_services() -> tuple[
     DocumentService,

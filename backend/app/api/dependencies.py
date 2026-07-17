@@ -6,6 +6,7 @@ from app.documents.parsers import (
     Utf8TextDocumentParser,
 )
 from app.documents.registry import DocumentParserRegistry
+from app.llm.providers.gemini import GeminiProvider
 from app.rag.chunking import PageAwareDocumentChunker
 from app.rag.embeddings.sentence_transformer import (
     SentenceTransformerEmbeddingProvider,
@@ -31,7 +32,13 @@ from app.services.assessment_execution_service import (
     AssessmentWorkflowExecutorProtocol,
     UnavailableAssessmentWorkflowExecutor,
 )
+from app.services.assessment_retrieval_context_service import (
+    AssessmentRetrievalContextService,
+)
 from app.services.assessment_service import AssessmentService
+from app.services.assessment_tool_context_service import (
+    AssessmentToolContextService,
+)
 from app.services.document_chunk_processing_service import (
     DocumentChunkProcessingService,
 )
@@ -55,8 +62,12 @@ from app.services.document_validation_service import (
     DocumentValidationService,
 )
 from app.services.embedding_service import EmbeddingService
+from app.services.llm_service import LLMService
 from app.storage.document_storage import (
     InMemoryDocumentStorage,
+)
+from app.workflows.runtime_factory import (
+    AssessmentWorkflowRuntimeFactory,
 )
 
 
@@ -246,4 +257,51 @@ def get_document_pipeline_service() -> DocumentPipelineService:
         extraction_service=(get_document_processing_service()),
         chunk_processing_service=(get_document_chunk_processing_service()),
         indexing_service=get_document_indexing_service(),
+    )
+
+
+@lru_cache
+def get_assessment_retrieval_context_service() -> AssessmentRetrievalContextService:
+    """Return the assessment-scoped retrieval context factory."""
+
+    return AssessmentRetrievalContextService(
+        embedding_service=get_embedding_service(),
+        index_registry=(get_assessment_vector_index_registry()),
+        candidate_limit=20,
+        final_limit=5,
+    )
+
+
+@lru_cache
+def get_assessment_tool_context_service() -> AssessmentToolContextService:
+    """Return the bounded specialist-tool context factory."""
+
+    return AssessmentToolContextService(
+        retrieval_context_service=(get_assessment_retrieval_context_service())
+    )
+
+
+def create_assessment_llm_service() -> LLMService:
+    """Create a fresh bounded LLM service for one workflow."""
+
+    settings = get_settings()
+
+    provider = GeminiProvider(
+        api_key=settings.gemini_api_key,
+        model_name=settings.llm_model,
+    )
+
+    return LLMService(
+        provider=provider,
+        max_calls_per_assessment=3,
+    )
+
+
+@lru_cache
+def get_assessment_runtime_factory() -> AssessmentWorkflowRuntimeFactory:
+    """Return the assessment-specific workflow runtime factory."""
+
+    return AssessmentWorkflowRuntimeFactory(
+        tool_context_service=(get_assessment_tool_context_service()),
+        llm_service_factory=create_assessment_llm_service,
     )
