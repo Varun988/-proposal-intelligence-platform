@@ -188,3 +188,27 @@ class DocumentValidationError(DocumentError):
 
 class DocumentStorageError(DocumentError):
     """Raised when document content cannot be stored or retrieved."""
+
+
+class SkillError(ApplicationError):
+    """Base exception for skill-related failures."""
+
+
+class SkillConfigurationError(SkillError):
+    """Raised when a skill definition or registry is misconfigured."""
+
+
+class SkillNotFoundError(SkillError):
+    """Raised when a requested skill cannot be found."""
+
+
+class SkillCapabilityNotFoundError(SkillError):
+    """Raised when no active skill provides a requested capability."""
+
+
+class SkillDependencyError(SkillError):
+    """Raised when skill dependencies cannot be satisfied."""
+
+
+class SkillRuntimeValidationError(SkillError):
+    """Raised when a skill conflicts with runtime configuration."""

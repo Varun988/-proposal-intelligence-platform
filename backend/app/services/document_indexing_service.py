@@ -47,24 +47,16 @@ class DocumentIndexingService:
         """Embed and add a document to its assessment-purpose index."""
 
         record = await self._document_repository.get(document_id)
-        if (
-            record.lifecycle_status
-            is not DocumentLifecycleStatus.INDEXING_PENDING
-        ):
+        if record.lifecycle_status is not DocumentLifecycleStatus.INDEXING_PENDING:
             raise DocumentConflictError(
-                "Document indexing requires lifecycle status "
-                "'indexing_pending'."
+                "Document indexing requires lifecycle status 'indexing_pending'."
             )
         if not record.assessment_id:
-            raise DocumentConflictError(
-                "Document indexing requires an assessment ID."
-            )
+            raise DocumentConflictError("Document indexing requires an assessment ID.")
 
         running_record = record.model_copy(
             update={
-                "lifecycle_status": (
-                    DocumentLifecycleStatus.INDEXING_RUNNING
-                ),
+                "lifecycle_status": (DocumentLifecycleStatus.INDEXING_RUNNING),
                 "error_message": None,
                 "updated_at": utc_now(),
             },
@@ -75,9 +67,7 @@ class DocumentIndexingService:
         try:
             chunks = await self._chunk_repository.get_chunks(document_id)
             if not chunks:
-                raise DocumentStorageError(
-                    "Document contains no chunks to index."
-                )
+                raise DocumentStorageError("Document contains no chunks to index.")
 
             embedding_result = await asyncio.to_thread(
                 self._embedding_service.embed_chunks,
@@ -119,10 +109,7 @@ class DocumentIndexingService:
     async def _mark_failed(self, record: object, error: Exception) -> None:
         """Persist a safe indexing failure state."""
 
-        safe_message = (
-            "Document indexing failed: "
-            f"{type(error).__name__}."
-        )
+        safe_message = f"Document indexing failed: {type(error).__name__}."
         failed_record = record.model_copy(
             update={
                 "lifecycle_status": DocumentLifecycleStatus.FAILED,

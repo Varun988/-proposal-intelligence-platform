@@ -111,8 +111,7 @@ def get_document_service() -> DocumentService:
 
 
 @lru_cache
-def get_extracted_document_repository(
-) -> InMemoryExtractedDocumentRepository:
+def get_extracted_document_repository() -> InMemoryExtractedDocumentRepository:
     """Return the extracted-document repository."""
 
     return InMemoryExtractedDocumentRepository()
@@ -143,17 +142,14 @@ def get_document_processing_service() -> DocumentProcessingService:
 
     return DocumentProcessingService(
         document_repository=get_document_repository(),
-        extracted_document_repository=(
-            get_extracted_document_repository()
-        ),
+        extracted_document_repository=(get_extracted_document_repository()),
         storage=get_document_storage(),
         extraction_service=get_document_extraction_service(),
     )
 
 
 @lru_cache
-def get_document_chunk_repository(
-) -> InMemoryDocumentChunkRepository:
+def get_document_chunk_repository() -> InMemoryDocumentChunkRepository:
     """Return the citation-ready chunk repository."""
 
     return InMemoryDocumentChunkRepository()
@@ -172,15 +168,12 @@ def get_document_chunking_service() -> DocumentChunkingService:
 
 
 @lru_cache
-def get_document_chunk_processing_service(
-) -> DocumentChunkProcessingService:
+def get_document_chunk_processing_service() -> DocumentChunkProcessingService:
     """Return the document chunk-processing service."""
 
     return DocumentChunkProcessingService(
         document_repository=get_document_repository(),
-        extracted_document_repository=(
-            get_extracted_document_repository()
-        ),
+        extracted_document_repository=(get_extracted_document_repository()),
         chunk_repository=get_document_chunk_repository(),
         chunking_service=get_document_chunking_service(),
     )
@@ -203,8 +196,7 @@ def get_embedding_service() -> EmbeddingService:
 
 
 @lru_cache
-def get_assessment_vector_index_registry(
-) -> InMemoryAssessmentVectorIndexRegistry:
+def get_assessment_vector_index_registry() -> InMemoryAssessmentVectorIndexRegistry:
     """Return the assessment-isolated vector-index registry."""
 
     return InMemoryAssessmentVectorIndexRegistry(
@@ -233,16 +225,13 @@ def get_document_pipeline_service() -> DocumentPipelineService:
 
     return DocumentPipelineService(
         extraction_service=get_document_processing_service(),
-        chunk_processing_service=(
-            get_document_chunk_processing_service()
-        ),
+        chunk_processing_service=(get_document_chunk_processing_service()),
         indexing_service=get_document_indexing_service(),
     )
 
 
 @lru_cache
-def get_assessment_retrieval_context_service(
-) -> AssessmentRetrievalContextService:
+def get_assessment_retrieval_context_service() -> AssessmentRetrievalContextService:
     """Return the assessment-scoped retrieval context factory."""
 
     return AssessmentRetrievalContextService(
@@ -254,14 +243,11 @@ def get_assessment_retrieval_context_service(
 
 
 @lru_cache
-def get_assessment_tool_context_service(
-) -> AssessmentToolContextService:
+def get_assessment_tool_context_service() -> AssessmentToolContextService:
     """Return the bounded specialist-tool context factory."""
 
     return AssessmentToolContextService(
-        retrieval_context_service=(
-            get_assessment_retrieval_context_service()
-        ),
+        retrieval_context_service=(get_assessment_retrieval_context_service()),
     )
 
 
@@ -280,8 +266,7 @@ def create_assessment_llm_service() -> LLMService:
 
 
 @lru_cache
-def get_assessment_runtime_factory(
-) -> AssessmentWorkflowRuntimeFactory:
+def get_assessment_runtime_factory() -> AssessmentWorkflowRuntimeFactory:
     """Return the assessment-specific workflow runtime factory."""
 
     return AssessmentWorkflowRuntimeFactory(
@@ -291,8 +276,7 @@ def get_assessment_runtime_factory(
 
 
 @lru_cache
-def get_assessment_workflow_executor(
-) -> DynamicAssessmentWorkflowExecutor:
+def get_assessment_workflow_executor() -> DynamicAssessmentWorkflowExecutor:
     """Return the dynamic assessment-scoped workflow executor."""
 
     return DynamicAssessmentWorkflowExecutor(

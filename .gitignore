@@ -46,3 +46,4 @@ logs/
 .coverage
 htmlcov/
 coverage.xml
+dump.py

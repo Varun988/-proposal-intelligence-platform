@@ -194,12 +194,7 @@ class RiskReportAgent:
     ) -> str:
         """Normalize recognized specialist-agent aliases."""
 
-        normalized_value = (
-            source_agent.strip()
-            .casefold()
-            .replace("_", "-")
-            .replace(" ", "-")
-        )
+        normalized_value = source_agent.strip().casefold().replace("_", "-").replace(" ", "-")
 
         while "--" in normalized_value:
             normalized_value = normalized_value.replace(

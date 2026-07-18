@@ -6,6 +6,7 @@ from app.repositories.assessment_vector_index import (
     InMemoryAssessmentVectorIndexRegistry,
 )
 from app.schemas.chunk import ChunkCitation, DocumentChunk
+from app.schemas.document_upload import DocumentPurpose
 from app.services.assessment_retrieval_context_service import (
     AssessmentRetrievalContextService,
 )
@@ -14,7 +15,7 @@ from app.services.assessment_tool_context_service import (
 )
 from app.services.embedding_service import EmbeddingService
 from tests.embedding_fakes import FakeEmbeddingProvider
-from app.schemas.document_upload import DocumentPurpose
+
 
 def create_chunk(
     assessment_id: str,
@@ -43,6 +44,7 @@ def create_chunk(
             "document_purpose": purpose.value,
         },
     )
+
 
 def create_services() -> tuple[
     AssessmentToolContextService,
@@ -100,6 +102,7 @@ async def index_document(
         vector_dimension=result.dimension,
         document_purpose=purpose,
     )
+
 
 @pytest.mark.asyncio
 async def test_proposal_registry_contains_only_evidence_search() -> None:

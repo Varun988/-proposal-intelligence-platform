@@ -39,9 +39,8 @@ class AssessmentToolContextService:
     ) -> ToolRegistry:
         """Create a proposal-purpose registry for one assessment."""
 
-        retrieval_service = (
-            await self._retrieval_context_service
-            .create_proposal_retrieval_service(assessment_id)
+        retrieval_service = await self._retrieval_context_service.create_proposal_retrieval_service(
+            assessment_id
         )
         return self._create_registry(
             retrieval_service=retrieval_service,
@@ -54,9 +53,8 @@ class AssessmentToolContextService:
     ) -> ToolRegistry:
         """Create a vendor-purpose registry for one assessment."""
 
-        retrieval_service = (
-            await self._retrieval_context_service
-            .create_vendor_retrieval_service(assessment_id)
+        retrieval_service = await self._retrieval_context_service.create_vendor_retrieval_service(
+            assessment_id
         )
         return self._create_registry(
             retrieval_service=retrieval_service,

@@ -170,9 +170,9 @@ async def test_registry_rejects_duplicate_document() -> None:
             vector_dimension=3,
         )
 
+
 @pytest.mark.asyncio
-async def test_registry_rejects_missing_document_purpose(
-) -> None:
+async def test_registry_rejects_missing_document_purpose() -> None:
     registry = create_registry()
 
     item = create_item(

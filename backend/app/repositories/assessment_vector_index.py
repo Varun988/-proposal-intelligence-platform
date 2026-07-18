@@ -23,9 +23,7 @@ class PurposeScopedVectorStore(BaseVectorStore):
 
         dimensions = {store.dimension for store in stores}
         if len(dimensions) != 1:
-            raise ValueError(
-                "Purpose-scoped vector stores must use one dimension."
-            )
+            raise ValueError("Purpose-scoped vector stores must use one dimension.")
 
         self._stores = list(stores)
         self._dimension = stores[0].dimension
@@ -45,9 +43,7 @@ class PurposeScopedVectorStore(BaseVectorStore):
     def add(self, items: list[EmbeddedChunk]) -> None:
         """Reject writes through a read-only scoped view."""
 
-        raise NotImplementedError(
-            "Purpose-scoped vector-store views are read-only."
-        )
+        raise NotImplementedError("Purpose-scoped vector-store views are read-only.")
 
     def search(
         self,
@@ -90,9 +86,7 @@ class PurposeScopedVectorStore(BaseVectorStore):
     def save(self, directory: Path) -> None:
         """Reject persistence through a composite read view."""
 
-        raise NotImplementedError(
-            "Persist underlying purpose stores individually."
-        )
+        raise NotImplementedError("Persist underlying purpose stores individually.")
 
     def clear(self) -> None:
         """Clear every underlying purpose store."""
@@ -185,16 +179,13 @@ class InMemoryAssessmentVectorIndexRegistry:
         )
 
         async with self._lock:
-            existing_metadata = self._metadata.get(
-                normalized_assessment_id
-            )
+            existing_metadata = self._metadata.get(normalized_assessment_id)
             if (
                 existing_metadata is not None
                 and normalized_document_id in existing_metadata.document_ids
             ):
                 raise DocumentConflictError(
-                    "Document is already indexed for assessment: "
-                    f"{normalized_document_id}."
+                    f"Document is already indexed for assessment: {normalized_document_id}."
                 )
 
             global_store = self._stores.get(normalized_assessment_id)
@@ -211,22 +202,17 @@ class InMemoryAssessmentVectorIndexRegistry:
             for store in (global_store, purpose_store):
                 if store.dimension != vector_dimension:
                     raise ValueError(
-                        "Assessment index vector dimension does not match "
-                        "the embedding dimension."
+                        "Assessment index vector dimension does not match the embedding dimension."
                     )
 
             global_store.add(items)
             purpose_store.add(items)
 
             document_ids = (
-                list(existing_metadata.document_ids)
-                if existing_metadata is not None
-                else []
+                list(existing_metadata.document_ids) if existing_metadata is not None else []
             )
             document_ids.append(normalized_document_id)
-            self._document_purposes[
-                (normalized_assessment_id, normalized_document_id)
-            ] = purpose
+            self._document_purposes[(normalized_assessment_id, normalized_document_id)] = purpose
 
             metadata = AssessmentVectorIndexMetadata(
                 assessment_id=normalized_assessment_id,
@@ -249,27 +235,20 @@ class InMemoryAssessmentVectorIndexRegistry:
 
         normalized_id = assessment_id.strip()
         if not normalized_id:
-            raise DocumentNotFoundError(
-                "Assessment index ID cannot be empty."
-            )
+            raise DocumentNotFoundError("Assessment index ID cannot be empty.")
 
         async with self._lock:
             if purposes is None:
                 store = self._stores.get(normalized_id)
                 if store is None:
                     raise DocumentNotFoundError(
-                        "Assessment vector index was not found: "
-                        f"{normalized_id}."
+                        f"Assessment vector index was not found: {normalized_id}."
                     )
                 return store
 
-            normalized_purposes = {
-                self._normalize_purpose(purpose) for purpose in purposes
-            }
+            normalized_purposes = {self._normalize_purpose(purpose) for purpose in purposes}
             if not normalized_purposes:
-                raise ValueError(
-                    "At least one document purpose is required."
-                )
+                raise ValueError("At least one document purpose is required.")
 
             stores = [
                 store
@@ -277,21 +256,13 @@ class InMemoryAssessmentVectorIndexRegistry:
                     normalized_purposes,
                     key=lambda value: value.value,
                 )
-                if (
-                    store := self._purpose_stores.get(
-                        (normalized_id, purpose)
-                    )
-                )
-                is not None
+                if (store := self._purpose_stores.get((normalized_id, purpose))) is not None
             ]
 
             if not stores:
-                purpose_values = ", ".join(
-                    sorted(purpose.value for purpose in normalized_purposes)
-                )
+                purpose_values = ", ".join(sorted(purpose.value for purpose in normalized_purposes))
                 raise DocumentNotFoundError(
-                    "Assessment vector index was not found for purposes: "
-                    f"{purpose_values}."
+                    f"Assessment vector index was not found for purposes: {purpose_values}."
                 )
 
             if len(stores) == 1:
@@ -309,8 +280,7 @@ class InMemoryAssessmentVectorIndexRegistry:
             metadata = self._metadata.get(normalized_id)
             if metadata is None:
                 raise DocumentNotFoundError(
-                    "Assessment vector index was not found: "
-                    f"{normalized_id}."
+                    f"Assessment vector index was not found: {normalized_id}."
                 )
             return metadata.model_copy(deep=True)
 
@@ -328,10 +298,7 @@ class InMemoryAssessmentVectorIndexRegistry:
 
         async with self._lock:
             metadata = self._metadata.get(normalized_assessment_id)
-            return bool(
-                metadata
-                and normalized_document_id in metadata.document_ids
-            )
+            return bool(metadata and normalized_document_id in metadata.document_ids)
 
     async def clear(self) -> None:
         """Remove all assessment and purpose indexes."""
@@ -357,29 +324,18 @@ class InMemoryAssessmentVectorIndexRegistry:
         if explicit_purpose is not None:
             purpose = cls._normalize_purpose(explicit_purpose)
         else:
-            values = {
-                item.chunk.metadata.get("document_purpose")
-                for item in items
-            }
+            values = {item.chunk.metadata.get("document_purpose") for item in items}
             if len(values) != 1:
-                raise ValueError(
-                    "Indexed chunks must share one document purpose."
-                )
+                raise ValueError("Indexed chunks must share one document purpose.")
             raw_purpose = values.pop()
             if not isinstance(raw_purpose, str):
-                raise ValueError(
-                    "Indexed chunks require document-purpose metadata."
-                )
+                raise ValueError("Indexed chunks require document-purpose metadata.")
             purpose = cls._normalize_purpose(raw_purpose)
 
         for item in items:
             chunk_purpose = item.chunk.metadata.get("document_purpose")
-            if chunk_purpose is not None and (
-                cls._normalize_purpose(chunk_purpose) is not purpose
-            ):
-                raise ValueError(
-                    "Chunk purpose does not match the indexed document."
-                )
+            if chunk_purpose is not None and (cls._normalize_purpose(chunk_purpose) is not purpose):
+                raise ValueError("Chunk purpose does not match the indexed document.")
         return purpose
 
     @staticmethod

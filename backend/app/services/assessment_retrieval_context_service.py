@@ -38,17 +38,13 @@ class AssessmentRetrievalContextService:
         if final_limit < 1:
             raise ValueError("Final limit must be at least one.")
         if final_limit > candidate_limit:
-            raise ValueError(
-                "Final limit cannot be greater than candidate limit."
-            )
+            raise ValueError("Final limit cannot be greater than candidate limit.")
 
         self._embedding_service = embedding_service
         self._index_registry = index_registry
         self._candidate_limit = candidate_limit
         self._final_limit = final_limit
-        self._deduplication_similarity_threshold = (
-            deduplication_similarity_threshold
-        )
+        self._deduplication_similarity_threshold = deduplication_similarity_threshold
         self._retrieval_weight = retrieval_weight
         self._lexical_weight = lexical_weight
 
@@ -102,17 +98,14 @@ class AssessmentRetrievalContextService:
         )
         if vector_store.dimension != self._embedding_service.dimension:
             raise ValueError(
-                "Assessment index dimension does not match the configured "
-                "embedding dimension."
+                "Assessment index dimension does not match the configured embedding dimension."
             )
 
         return RetrievalService(
             embedding_service=self._embedding_service,
             vector_store=vector_store,
             deduplicator=ContentDeduplicator(
-                similarity_threshold=(
-                    self._deduplication_similarity_threshold
-                )
+                similarity_threshold=(self._deduplication_similarity_threshold)
             ),
             reranker=LexicalRetrievalReranker(
                 retrieval_weight=self._retrieval_weight,
